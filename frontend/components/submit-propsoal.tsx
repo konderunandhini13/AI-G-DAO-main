@@ -119,7 +119,19 @@ export function SubmitProposalPage() {
 
     try {
       const fundingAmountNum = parseInt(formData.fundingAmount) || 0
-      
+
+      // Save draft to sessionStorage BEFORE submitting so review page gets it
+      const draftData = {
+        title: formData.projectTitle,
+        description: formData.description,
+        category: formData.category,
+        fundingAmount: fundingAmountNum,
+        expectedImpact: formData.expectedImpact,
+        location: formData.location,
+        lat: formData.lat,
+        lng: formData.lng,
+      }
+
       // Submit proposal to blockchain
       const result = await submitProposal({
         title: formData.projectTitle,
@@ -129,39 +141,12 @@ export function SubmitProposalPage() {
         category: formData.category,
         location: formData.location,
       })
-      
-      // Update transaction state with success
-      setTransactionState({
-        status: 'confirmed',
-        txId: result.txId,
-        result: result
-      })
-      
-      // Reset form after successful submission
-      setFormData({
-        projectTitle: "",
-        description: "",
-        fundingAmount: "",
-        duration: "",
-        expectedImpact: "",
-        category: "",
-        location: "",
-        lat: 0,
-        lng: 0,
-      })
-      
-      // Save proposal draft to sessionStorage and redirect to AI impact analysis page
+
+      // Now save draft with proposalId and txId
       try {
         if (typeof window !== 'undefined') {
           sessionStorage.setItem('proposalDraft', JSON.stringify({
-            title: formData.projectTitle,
-            description: formData.description,
-            category: formData.category,
-            fundingAmount: fundingAmountNum,
-            expectedImpact: formData.expectedImpact,
-            location: formData.location,
-            lat: formData.lat,
-            lng: formData.lng,
+            ...draftData,
             txId: result.txId,
             proposalId: (result as any).proposalId || undefined
           }))
@@ -170,7 +155,17 @@ export function SubmitProposalPage() {
         console.warn('Failed to store proposal draft:', err)
       }
 
-      // Redirect user to AI review page for impact analysis
+      // Update transaction state
+      setTransactionState({ status: 'confirmed', txId: result.txId, result })
+
+      // Reset form
+      setFormData({
+        projectTitle: "", description: "", fundingAmount: "",
+        duration: "", expectedImpact: "", category: "",
+        location: "", lat: 0, lng: 0,
+      })
+
+      // Redirect immediately to AI review
       router.push('/proposal-review')
 
     } catch (err) {

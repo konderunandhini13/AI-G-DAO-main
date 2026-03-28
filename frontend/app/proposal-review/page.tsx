@@ -75,10 +75,12 @@ export default function ProposalReviewPage() {
       if (!draft) return
       const parsed = JSON.parse(draft)
 
-      // Capture the proposal ID so all subsequent re-analyses save against it
+      // Remove draft immediately so it doesn't re-trigger on re-render
+      sessionStorage.removeItem('proposalDraft')
+
       if (parsed.proposalId) setDraftProposalId(parsed.proposalId)
 
-      setFormData({
+      const filled = {
         projectTitle: parsed.title || '',
         description: parsed.description || '',
         fundingAmount: parsed.fundingAmount ? String(parsed.fundingAmount) : '',
@@ -86,9 +88,10 @@ export default function ProposalReviewPage() {
         expectedImpact: parsed.expectedImpact || '',
         category: parsed.category || '',
         location: parsed.location || ''
-      })
+      }
+      setFormData(filled)
 
-      // Trigger AI analysis with the draft
+      // Auto-trigger AI analysis immediately
       analyzeProposalData({
         title: parsed.title || '',
         description: parsed.description || '',
@@ -96,10 +99,8 @@ export default function ProposalReviewPage() {
         fundingAmount: parsed.fundingAmount ? String(parsed.fundingAmount) : '0',
         expectedImpact: parsed.expectedImpact || 'To be determined',
         location: parsed.location || 'Global'
-      })
+      }, parsed.proposalId)
 
-      // Remove draft after consuming it
-      sessionStorage.removeItem('proposalDraft')
     } catch (err) {
       console.warn('Failed to load proposal draft:', err)
     }
@@ -126,7 +127,7 @@ export default function ProposalReviewPage() {
   }
 
   return (
-    <WalletGuard requireBalance={0.05}>
+    <WalletGuard requireBalance={0}>
       <div className="relative flex flex-col min-h-[100dvh] text-white overflow-hidden">
       {/* Blue Gradient Background */}
       <div className="fixed inset-0 z-0">
@@ -287,7 +288,23 @@ export default function ProposalReviewPage() {
 
         {/* AI Review Results */}
         <div className="flex-1 max-w-2xl">
-          {reviewResult ? (
+          {isAnalyzing ? (
+            <Card className="bg-white/5 backdrop-blur-xl border-white/10 rounded-3xl">
+              <CardContent className="flex flex-col items-center justify-center py-16 text-center space-y-4">
+                <div className="relative">
+                  <div className="w-16 h-16 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin" />
+                  <SparklesIcon className="w-6 h-6 text-blue-400 absolute inset-0 m-auto" />
+                </div>
+                <h3 className="text-xl font-semibold text-white">Analyzing your proposal...</h3>
+                <p className="text-white/50 text-sm max-w-xs">Our AI is reviewing your climate project for impact, feasibility and innovation</p>
+                <div className="flex gap-1 mt-2">
+                  {[0,1,2].map(i => (
+                    <div key={i} className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          ) : reviewResult ? (
             <AIReviewDisplay review={reviewResult} />
           ) : (
             <Card className="bg-white/5 backdrop-blur-xl border-white/10 rounded-3xl">
