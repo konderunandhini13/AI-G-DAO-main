@@ -8,7 +8,6 @@ import { ChevronRightIcon, CoinsIcon } from "lucide-react"
 import { useWalletContext } from "@/hooks/use-wallet"
 import algosdk from "algosdk"
 
-const TREASURY = process.env.NEXT_PUBLIC_TREASURY_WALLET || ''
 const algodClient = new algosdk.Algodv2("", "https://testnet-api.algonode.cloud", "")
 
 interface MilestoneFundingProps {
@@ -220,37 +219,39 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
     if (!address || !signTransaction) return
     setReleasingIdx(milestoneIdx)
     try {
+      // Proposer signs a self-transaction as on-chain proof of release claim
       const params = await algodClient.getTransactionParams().do()
       const txn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-        sender: TREASURY,
-        receiver: proposalCreator,
-        amount: Math.round(amountAlgo * 1_000_000),
+        sender: address,
+        receiver: address,
+        amount: 0,
         suggestedParams: params,
-        note: new Uint8Array(Buffer.from(`EcoNexus milestone ${milestoneIdx + 1} release`)),
+        note: new Uint8Array(Buffer.from(`EcoNexus milestone ${milestoneIdx + 1} release claim - proposal ${proposalId}`)),
       })
       const signed = await signTransaction(txn)
       const sendRes = await algodClient.sendRawTransaction(signed).do()
       const txId = sendRes.txid || sendRes.txId || String(sendRes)
       await algosdk.waitForConfirmation(algodClient, txId, 10)
 
-      await fetch("/api/treasury", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      // Record release in DB
+      await fetch('/api/treasury', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ proposalId, milestoneIdx, amountAlgo, txId }),
       })
 
+      // Update milestone statuses: current → released, next → active
       const pRes = await fetch(`/api/proposals/${proposalId}`)
       const freshP = await pRes.json()
       const finalMilestones = (freshP.milestones || []).map((m: any, i: number) => {
-        if (i === milestoneIdx) return { ...m, status: "released" }
-        // Unlock the next milestone
-        if (i === milestoneIdx + 1 && m.status === "locked") return { ...m, status: "active" }
+        if (i === milestoneIdx) return { ...m, status: 'released' }
+        if (i === milestoneIdx + 1 && m.status === 'locked') return { ...m, status: 'active' }
         return m
       })
 
-      await fetch("/api/proposals", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+      await fetch('/api/proposals', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: proposalId, milestones: finalMilestones }),
       })
 
@@ -261,7 +262,7 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
       setReleaseModal({
         idx: milestoneIdx,
         amount: amountAlgo,
-        txId: typeof txId === "string" ? txId : String(txId),
+        txId: typeof txId === 'string' ? txId : String(txId),
         allDone: nextReleased.length >= milestones.length,
       })
     } catch (err: any) {
