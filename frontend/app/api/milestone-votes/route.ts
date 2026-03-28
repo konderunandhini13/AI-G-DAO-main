@@ -33,8 +33,20 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// POST /api/milestone-votes
-export async function POST(req: NextRequest) {
+// DELETE /api/milestone-votes — clear votes for a milestone when proof is resubmitted
+export async function DELETE(req: NextRequest) {
+  try {
+    await ensureTable()
+    const { proposalId, milestoneIdx } = await req.json()
+    await pool.query(
+      'DELETE FROM milestone_votes WHERE proposal_id = $1 AND milestone_idx = $2',
+      [proposalId, milestoneIdx]
+    )
+    return NextResponse.json({ success: true })
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message }, { status: 500 })
+  }
+}
   try {
     await ensureTable()
     const { proposalId, milestoneIdx, voterAddress, vote } = await req.json()

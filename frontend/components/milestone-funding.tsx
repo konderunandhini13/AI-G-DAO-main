@@ -83,10 +83,12 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
             const mv = (allVotesData.votes || []).filter((v: any) => v.milestone_idx === i)
             const dbYes = mv.filter((v: any) => v.vote === "for").length
             const dbNo = mv.filter((v: any) => v.vote === "against").length
-            if (m.status !== "pending_proof") return { ...m, voteYes: dbYes, voteNo: dbNo }
+            // Recompute status for both pending_proof and failed (in case proof was resubmitted)
+            if (m.status !== "pending_proof" && m.status !== "failed") return { ...m, voteYes: dbYes, voteNo: dbNo }
             let newStatus = m.status
             if (dbNo > 0) newStatus = "failed"
             else if (dbYes >= threshold) newStatus = "completed"
+            else if (m.status === "failed" && dbYes === 0 && dbNo === 0) newStatus = m.status // keep failed if no new votes yet
             return { ...m, voteYes: dbYes, voteNo: dbNo, status: newStatus }
           })
           setMilestones(recomputed)
@@ -117,6 +119,14 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
     if (!proof) return alert("Please describe your proof of completion.")
     setSubmittingProof(milestoneIdx)
     try {
+      // 1. Delete old votes for this milestone so community can vote fresh
+      await fetch("/api/milestone-votes", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ proposalId, milestoneIdx }),
+      })
+
+      // 2. Update milestone status to pending_proof with new proof
       const pRes = await fetch(`/api/proposals/${proposalId}`)
       const fresh = await pRes.json()
       const updated = (fresh.milestones || []).map((m: any, i: number) =>
@@ -127,7 +137,10 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: proposalId, milestones: updated }),
       })
+
+      // 3. Update local state immediately
       setMilestones(updated)
+      setMyVotes(prev => { const n = { ...prev }; delete n[milestoneIdx]; return n })
       setProofInputs(prev => ({ ...prev, [milestoneIdx]: "" }))
     } catch (err: any) {
       alert(`Failed: ${err.message}`)
