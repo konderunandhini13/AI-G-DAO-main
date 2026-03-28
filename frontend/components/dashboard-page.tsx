@@ -261,7 +261,7 @@ export function DashboardPage() {
       } catch {}
     }
     fetchTreasury()
-    const interval = setInterval(fetchTreasury, 30000)
+    const interval = setInterval(fetchTreasury, 10000)
     return () => clearInterval(interval)
   }, [])
 

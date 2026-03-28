@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import pool from '@/lib/db'
 
-const TREASURY = process.env.NEXT_PUBLIC_TREASURY_WALLET!
+const TREASURY = '5TVL4FSSJ7OL245FRMZALZQICP3CTRT262S7YUFTLK3ZBBBFVKELOEV5XM'
 const ALGOD_URL = 'https://testnet-api.algonode.cloud'
 
-// Cache balance for 30s to avoid hitting Algorand testnet on every request
+// Cache balance for 5s
 let balanceCache: { value: number; ts: number } | null = null
 
 async function ensureTable() {
@@ -23,7 +23,7 @@ async function ensureTable() {
 
 async function getLiveBalance(): Promise<number> {
   const now = Date.now()
-  if (balanceCache && now - balanceCache.ts < 10_000) return balanceCache.value
+  if (balanceCache && now - balanceCache.ts < 5_000) return balanceCache.value
   try {
     const res = await fetch(`${ALGOD_URL}/v2/accounts/${TREASURY}`, {
       headers: { 'X-Algo-API-Token': '' },

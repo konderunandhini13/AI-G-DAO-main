@@ -117,14 +117,20 @@ export default function ProposalDetailPage() {
             }
           }
         } catch {}
-        // Load treasury balance + released milestones
+        // Load treasury balance + released milestones — poll every 10s
         try {
-          const t = await fetch(`/api/treasury?proposalId=${proposalId}`)
-          if (t.ok) {
-            const td = await t.json()
-            setTreasuryBalance(td.balanceAlgo)
-            setReleasedMilestones(td.released || [])
+          const fetchTreasury = async () => {
+            const t = await fetch(`/api/treasury?proposalId=${proposalId}`)
+            if (t.ok) {
+              const td = await t.json()
+              setTreasuryBalance(td.balanceAlgo)
+              setReleasedMilestones(td.released || [])
+            }
           }
+          await fetchTreasury()
+          const treasuryInterval = setInterval(fetchTreasury, 10000)
+          // Store interval id on window so cleanup works across re-renders
+          ;(window as any).__treasuryInterval = treasuryInterval
         } catch {}
         // Load reputation for proposer
         if (p?.creator) {
@@ -138,6 +144,11 @@ export default function ProposalDetailPage() {
       }
     }
     load()
+    return () => {
+      if ((window as any).__treasuryInterval) {
+        clearInterval((window as any).__treasuryInterval)
+      }
+    }
   }, [proposalId])
 
   const handleMilestoneVote = async (milestoneIdx: number, vote: 'for' | 'against') => {
