@@ -40,6 +40,8 @@ export function SubmitProposalPage() {
     expectedImpact: "",
     category: "",
     location: "",
+    lat: 0,
+    lng: 0,
   })
 
   // Transaction state
@@ -63,6 +65,8 @@ export function SubmitProposalPage() {
           expectedImpact: "",
           category: "",
           location: "",
+          lat: 0,
+          lng: 0,
         })
         setTransactionState({ status: 'idle' })
       }, 3000)
@@ -142,6 +146,8 @@ export function SubmitProposalPage() {
         expectedImpact: "",
         category: "",
         location: "",
+        lat: 0,
+        lng: 0,
       })
       
       // Save proposal draft to sessionStorage and redirect to AI impact analysis page
@@ -154,6 +160,8 @@ export function SubmitProposalPage() {
             fundingAmount: fundingAmountNum,
             expectedImpact: formData.expectedImpact,
             location: formData.location,
+            lat: formData.lat,
+            lng: formData.lng,
             txId: result.txId,
             proposalId: (result as any).proposalId || undefined
           }))
@@ -264,50 +272,44 @@ export function SubmitProposalPage() {
                   />
                 </div>
 
-                {/* Category & Location */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="category" className="text-white font-medium text-sm">
-                      Category *
-                    </Label>
-                    <div className="relative">
-                      <select
-                        id="category"
-                        value={formData.category}
-                        onChange={(e) => handleInputChange("category", e.target.value)}
-                        required
-                        className="w-full bg-white/5 border border-white/20 text-white rounded-xl px-3 py-2 sm:px-4 sm:py-3 focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-white/40 text-sm sm:text-base h-10 sm:h-12 touch-manipulation appearance-none"
-                        style={{
-                          color: formData.category ? 'white' : 'rgba(255, 255, 255, 0.4)'
-                        }}
-                      >
-                        <option value="" disabled className="bg-slate-800 text-white/60">Select category</option>
-                        <option value="renewable-energy" className="bg-slate-800 text-white">Renewable Energy</option>
-                        <option value="reforestation" className="bg-slate-800 text-white">Reforestation</option>
-                        <option value="water-conservation" className="bg-slate-800 text-white">Water Conservation</option>
-                        <option value="waste-management" className="bg-slate-800 text-white">Waste Management</option>
-                        <option value="sustainable-agriculture" className="bg-slate-800 text-white">Sustainable Agriculture</option>
-                        <option value="carbon-capture" className="bg-slate-800 text-white">Carbon Capture</option>
-                        <option value="climate-education" className="bg-slate-800 text-white">Climate Education</option>
-                      </select>
-                      {/* Custom dropdown arrow */}
-                      <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                        <svg className="w-4 h-4 text-white/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                        </svg>
-                      </div>
+                {/* Category */}
+                <div className="space-y-2">
+                  <Label htmlFor="category" className="text-white font-medium text-sm">
+                    Category *
+                  </Label>
+                  <div className="relative">
+                    <select
+                      id="category"
+                      value={formData.category}
+                      onChange={(e) => handleInputChange("category", e.target.value)}
+                      required
+                      className="w-full bg-white/5 border border-white/20 text-white rounded-xl px-3 py-2 sm:px-4 sm:py-3 focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-white/40 text-sm sm:text-base h-10 sm:h-12 touch-manipulation appearance-none"
+                      style={{ color: formData.category ? 'white' : 'rgba(255, 255, 255, 0.4)' }}
+                    >
+                      <option value="" disabled className="bg-slate-800 text-white/60">Select category</option>
+                      <option value="renewable-energy" className="bg-slate-800 text-white">Renewable Energy</option>
+                      <option value="reforestation" className="bg-slate-800 text-white">Reforestation</option>
+                      <option value="water-conservation" className="bg-slate-800 text-white">Water Conservation</option>
+                      <option value="waste-management" className="bg-slate-800 text-white">Waste Management</option>
+                      <option value="sustainable-agriculture" className="bg-slate-800 text-white">Sustainable Agriculture</option>
+                      <option value="carbon-capture" className="bg-slate-800 text-white">Carbon Capture</option>
+                      <option value="climate-education" className="bg-slate-800 text-white">Climate Education</option>
+                    </select>
+                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                      <svg className="w-4 h-4 text-white/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
                     </div>
                   </div>
+                </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="location" className="text-white font-medium text-sm">
-                      Location *
-                    </Label>
-                    <LocationPicker
-                      value={formData.location}
-                      onChange={(location) => handleInputChange("location", location)}
-                    />
-                  </div>
+                {/* Location — full width with map */}
+                <div className="space-y-2">
+                  <Label className="text-white font-medium text-sm">Location *</Label>
+                  <LocationPicker
+                    value={formData.location}
+                    onChange={(location, lat, lng) => setFormData(prev => ({ ...prev, location, lat, lng }))}
+                  />
                 </div>
 
                 {/* Project Description */}
