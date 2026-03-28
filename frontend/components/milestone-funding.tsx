@@ -4,9 +4,9 @@ import { useState, useEffect, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { ChevronRightIcon, CoinsIcon, QrCodeIcon, XIcon } from "lucide-react"
+import { ChevronRightIcon, CoinsIcon, XIcon } from "lucide-react"
 import { useWalletContext } from "@/hooks/use-wallet"
-import QRCode from "react-qr-code"
+import { PeraWalletConnect } from "@perawallet/connect"
 import algosdk from "algosdk"
 
 const TREASURY = '5TVL4FSSJ7OL245FRMZALZQICP3CTRT262S7YUFTLK3ZBBBFVKELOEV5XM'
@@ -22,15 +22,12 @@ interface MilestoneFundingProps {
 export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, initialMilestones }: MilestoneFundingProps) {
   const { address, signTransaction } = useWalletContext()
   const [milestones, setMilestones] = useState<any[]>(initialMilestones || [])
-  const [eligibleCount, setEligibleCount] = useState(1) // members excluding proposer
+  const [eligibleCount, setEligibleCount] = useState(1)
   const [treasuryBalance, setTreasuryBalance] = useState<number | null>(null)
   const [releasedMilestones, setReleasedMilestones] = useState<number[]>([])
   const [votingIdx, setVotingIdx] = useState<number | null>(null)
   const [releasingIdx, setReleasingIdx] = useState<number | null>(null)
   const [releaseModal, setReleaseModal] = useState<{ idx: number; amount: number; txId: string; allDone: boolean } | null>(null)
-  const [qrModal, setQrModal] = useState<{ idx: number; amount: number; qrValue: string; txnB64: string } | null>(null)
-  const [txIdInput, setTxIdInput] = useState('')
-  const [confirmingTx, setConfirmingTx] = useState(false)
   const [myVotes, setMyVotes] = useState<Record<number, "for" | "against">>({})
   const [proofInputs, setProofInputs] = useState<Record<number, string>>({})
   const [submittingProof, setSubmittingProof] = useState<number | null>(null)
@@ -41,7 +38,6 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
     if (initialMilestones?.length) setMilestones(initialMilestones)
   }, [initialMilestones])
 
-  // Fetch my votes for this proposal
   const fetchMyVotes = useCallback(async () => {
     if (!address || !proposalId) return
     try {
@@ -55,7 +51,6 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
     } catch {}
   }, [address, proposalId])
 
-  // Fetch all data and recompute milestone statuses from DB votes
   const fetchBackground = useCallback(async () => {
     try {
       const [mRes, tRes, pRes, allVotesRes] = await Promise.all([
@@ -65,15 +60,11 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
         fetch(`/api/milestone-votes?proposalId=${proposalId}`),
       ])
 
-      // Eligible voters = all members except proposer
       let threshold = 1
       if (mRes.ok) {
         const md = await mRes.json()
         const eligible = (md.members || []).filter((m: any) => m.address !== proposalCreator)
-        // If members API returns no list, use count - 1
-        const eligibleNum = md.members
-          ? eligible.length
-          : Math.max(1, (md.count || 1) - 1)
+        const eligibleNum = md.members ? eligible.length : Math.max(1, (md.count || 1) - 1)
         threshold = eligibleNum > 0 ? eligibleNum : 1
         setEligibleCount(threshold)
       }
@@ -92,23 +83,13 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
             const mv = (allVotesData.votes || []).filter((v: any) => v.milestone_idx === i)
             const dbYes = mv.filter((v: any) => v.vote === "for").length
             const dbNo = mv.filter((v: any) => v.vote === "against").length
-
-            // Only recompute status when proof is pending
             if (m.status !== "pending_proof") return { ...m, voteYes: dbYes, voteNo: dbNo }
-
-            // Any rejection = failed; all eligible voted yes = completed
             let newStatus = m.status
-            if (dbNo > 0) {
-              newStatus = "failed"
-            } else if (dbYes >= threshold) {
-              newStatus = "completed"
-            }
+            if (dbNo > 0) newStatus = "failed"
+            else if (dbYes >= threshold) newStatus = "completed"
             return { ...m, voteYes: dbYes, voteNo: dbNo, status: newStatus }
           })
-
           setMilestones(recomputed)
-
-          // Persist status changes to DB if anything changed
           const changed = recomputed.some((m: any, i: number) => m.status !== p.milestones[i].status)
           if (changed) {
             fetch("/api/proposals", {
@@ -131,7 +112,6 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
 
   useEffect(() => { setMyVotes({}); fetchMyVotes() }, [address, fetchMyVotes])
 
-  // Proposer submits proof of completion
   const handleSubmitProof = async (milestoneIdx: number) => {
     const proof = proofInputs[milestoneIdx]?.trim()
     if (!proof) return alert("Please describe your proof of completion.")
@@ -147,7 +127,6 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: proposalId, milestones: updated }),
       })
-      // Clear old milestone votes for this milestone so fresh voting starts
       setMilestones(updated)
       setProofInputs(prev => ({ ...prev, [milestoneIdx]: "" }))
     } catch (err: any) {
@@ -157,7 +136,6 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
     }
   }
 
-  // Community member votes to approve/reject proof
   const handleVote = async (milestoneIdx: number, vote: "for" | "against") => {
     if (!address || isProposer) return
     setVotingIdx(milestoneIdx)
@@ -169,7 +147,6 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
       })
       if (!voteRes.ok) throw new Error("Failed to record vote")
 
-      // Fetch fresh counts from DB
       const [allVotesRes, mRes, pRes] = await Promise.all([
         fetch(`/api/milestone-votes?proposalId=${proposalId}`),
         fetch("/api/members"),
@@ -178,7 +155,6 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
       const allVotesData = await allVotesRes.json()
       const fresh = await pRes.json()
       const freshMilestones = fresh.milestones || []
-
       const milestoneVotes = (allVotesData.votes || []).filter((v: any) => v.milestone_idx === milestoneIdx)
       const dbYes = milestoneVotes.filter((v: any) => v.vote === "for").length
       const dbNo = milestoneVotes.filter((v: any) => v.vote === "against").length
@@ -193,18 +169,13 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
         setEligibleCount(threshold)
       }
 
-      // Any rejection = failed; all eligible voted yes = completed
       let newStatus = freshMilestones[milestoneIdx]?.status
-      if (dbNo > 0) {
-        newStatus = "failed"
-      } else if (dbYes >= threshold) {
-        newStatus = "completed"
-      }
+      if (dbNo > 0) newStatus = "failed"
+      else if (dbYes >= threshold) newStatus = "completed"
 
       const updated = freshMilestones.map((m: any, i: number) =>
         i !== milestoneIdx ? m : { ...m, voteYes: dbYes, voteNo: dbNo, status: newStatus }
       )
-
       await fetch("/api/proposals", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -219,10 +190,32 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
     }
   }
 
-  // Build unsigned txn and show QR code for Pera to scan
-  const handleShowQR = async (milestoneIdx: number, amountAlgo: number) => {
+  // Connect treasury wallet via a fresh Pera session and sign the payment
+  const handleRelease = async (milestoneIdx: number, amountAlgo: number) => {
     setReleasingIdx(milestoneIdx)
     try {
+      // Create a fresh Pera instance so the proposer can connect the treasury account
+      const treasuryPera = new PeraWalletConnect()
+      let treasuryAccounts: string[] = []
+
+      try {
+        // Try reconnecting existing session first
+        treasuryAccounts = await treasuryPera.reconnectSession()
+      } catch {}
+
+      // If no session or wrong account, open connect modal
+      if (!treasuryAccounts.includes(TREASURY)) {
+        treasuryAccounts = await treasuryPera.connect()
+      }
+
+      if (!treasuryAccounts.includes(TREASURY)) {
+        treasuryPera.disconnect()
+        throw new Error(
+          `Please select the treasury account in Pera.\nTreasury: ${TREASURY.slice(0, 10)}...${TREASURY.slice(-6)}`
+        )
+      }
+
+      // Build and sign the payment transaction from treasury → proposer
       const params = await algodClient.getTransactionParams().do()
       const txn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
         sender: TREASURY,
@@ -231,39 +224,26 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
         suggestedParams: params,
         note: new Uint8Array(Buffer.from(`EcoNexus milestone ${milestoneIdx + 1} release - proposal ${proposalId}`)),
       })
-      const encoded = algosdk.encodeUnsignedTransaction(txn)
-      const b64 = Buffer.from(encoded).toString('base64')
-      // Pera deep link to sign a raw unsigned txn
-      const peraDeepLink = `perawallet://sign-transaction?transaction=${encodeURIComponent(b64)}`
-      setQrModal({ idx: milestoneIdx, amount: amountAlgo, qrValue: peraDeepLink, txnB64: b64 })
-      setTxIdInput('')
-    } catch (err: any) {
-      alert(`Failed to build transaction: ${err.message}`)
-    } finally {
-      setReleasingIdx(null)
-    }
-  }
 
-  // After Pera signs and broadcasts, proposer pastes the txId to confirm
-  const handleConfirmRelease = async () => {
-    if (!qrModal || !txIdInput.trim()) return
-    setConfirmingTx(true)
-    try {
-      // Wait for confirmation on chain
-      await algosdk.waitForConfirmation(algodClient, txIdInput.trim(), 10)
+      const signedTxns = await treasuryPera.signTransaction([[{ txn, signers: [TREASURY] }]])
+      const sendRes = await algodClient.sendRawTransaction(signedTxns[0]).do()
+      const txId = sendRes.txid || sendRes.txId || String(sendRes)
+      await algosdk.waitForConfirmation(algodClient, txId, 10)
+      treasuryPera.disconnect()
 
-      const { idx, amount } = qrModal
+      // Record in DB
       await fetch('/api/treasury', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ proposalId, milestoneIdx: idx, amountAlgo: amount, txId: txIdInput.trim() }),
+        body: JSON.stringify({ proposalId, milestoneIdx, amountAlgo, txId }),
       })
 
+      // Update milestone statuses
       const pRes = await fetch(`/api/proposals/${proposalId}`)
       const freshP = await pRes.json()
       const finalMilestones = (freshP.milestones || []).map((m: any, i: number) => {
-        if (i === idx) return { ...m, status: 'released' }
-        if (i === idx + 1 && m.status === 'locked') return { ...m, status: 'active' }
+        if (i === milestoneIdx) return { ...m, status: 'released' }
+        if (i === milestoneIdx + 1 && m.status === 'locked') return { ...m, status: 'active' }
         return m
       })
       await fetch('/api/proposals', {
@@ -273,19 +253,19 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
       })
 
       setMilestones(finalMilestones)
-      const nextReleased = [...releasedMilestones, idx]
+      const nextReleased = [...releasedMilestones, milestoneIdx]
       setReleasedMilestones(nextReleased)
-      setTreasuryBalance(prev => prev !== null ? prev - amount : null)
-      setQrModal(null)
+      setTreasuryBalance(prev => prev !== null ? prev - amountAlgo : null)
       setReleaseModal({
-        idx, amount,
-        txId: txIdInput.trim(),
+        idx: milestoneIdx,
+        amount: amountAlgo,
+        txId: typeof txId === 'string' ? txId : String(txId),
         allDone: nextReleased.length >= milestones.length,
       })
     } catch (err: any) {
-      alert(`Confirmation failed: ${err.message}`)
+      alert(`Release failed: ${err.message}`)
     } finally {
-      setConfirmingTx(false)
+      setReleasingIdx(null)
     }
   }
 
@@ -324,20 +304,14 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
             const isPendingProof = m.status === "pending_proof"
             const voteYes = m.voteYes || 0
             const voteNo = m.voteNo || 0
-            const totalVotes = voteYes + voteNo
             const myVote = myVotes[i]
-
-            // Only non-proposer community members can vote on proof
             const canVote = isPendingProof && !isProposer && !myVote && !!address
 
-            // Release button: only proposer, only after ALL eligible members approved
-            const canRelease = isCompleted && !isReleased && isProposer && voteYes >= eligibleCount && voteNo === 0
-
             const statusLabel = isReleased ? "💸 Released"
-              : isCompleted ? "✅ Approved — Ready to Release"
+              : isCompleted ? "✅ Approved"
               : isFailed ? "✗ Rejected"
               : isLocked ? "🔒 Locked"
-              : isPendingProof ? `📋 Proof Submitted (${voteYes}/${eligibleCount} approved)`
+              : isPendingProof ? `📋 Proof Submitted (${voteYes}/${eligibleCount})`
               : "⏳ Active"
 
             const statusColor = isReleased ? "bg-purple-500/20 text-purple-400 border-purple-500/30"
@@ -357,7 +331,7 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
             return (
               <div key={i}>
                 <div className={`rounded-2xl border p-4 space-y-2 transition-all ${cardBg}`}>
-                  {/* Header row */}
+                  {/* Header */}
                   <div className="flex items-center justify-between gap-2 flex-wrap">
                     <div className="flex items-center gap-2">
                       <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
@@ -375,7 +349,7 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
 
                   {m.description && <p className="text-white/50 text-xs pl-8">{m.description}</p>}
 
-                  {/* STEP 1: Active — proposer does the work then submits proof */}
+                  {/* STEP 1: Active — proposer submits proof */}
                   {isActive && isProposer && (
                     <div className="pl-8 space-y-2 pt-1">
                       <p className="text-blue-300 text-xs font-medium">📝 Complete this milestone then submit your proof:</p>
@@ -392,33 +366,27 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
                       </Button>
                     </div>
                   )}
-
                   {isActive && !isProposer && (
-                    <p className="text-white/30 text-xs pl-8">⏳ Waiting for proposer to complete work and submit proof...</p>
+                    <p className="text-white/30 text-xs pl-8">⏳ Waiting for proposer to submit proof...</p>
                   )}
 
                   {/* STEP 2: Proof submitted — community votes */}
                   {isPendingProof && (
                     <div className="pl-8 space-y-2 pt-1">
                       <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-3">
-                        <p className="text-yellow-400 text-xs font-medium mb-1">📋 Proof submitted by proposer:</p>
+                        <p className="text-yellow-400 text-xs font-medium mb-1">📋 Proof submitted:</p>
                         <p className="text-white/70 text-xs">{m.proof}</p>
                       </div>
-
-                      {/* Vote progress bar */}
                       <div className="space-y-1">
                         <div className="flex justify-between text-xs text-white/40">
                           <span>{voteYes} of {eligibleCount} members approved</span>
                           {voteNo > 0 && <span className="text-red-400">{voteNo} rejected</span>}
                         </div>
                         <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-green-500 rounded-full transition-all"
-                            style={{ width: `${eligibleCount > 0 ? (voteYes / eligibleCount) * 100 : 0}%` }}
-                          />
+                          <div className="h-full bg-green-500 rounded-full transition-all"
+                            style={{ width: `${eligibleCount > 0 ? (voteYes / eligibleCount) * 100 : 0}%` }} />
                         </div>
                       </div>
-
                       {canVote && (
                         <div className="flex gap-2">
                           <Button size="sm" onClick={() => handleVote(i, "for")} disabled={votingIdx === i}
@@ -431,45 +399,47 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
                           </Button>
                         </div>
                       )}
-
                       {myVote && (
                         <p className={`text-xs ${myVote === "for" ? "text-green-400/70" : "text-red-400/70"}`}>
                           ✓ You voted {myVote === "for" ? "Approve" : "Reject"}
                         </p>
                       )}
-
                       {isProposer && (
                         <p className="text-yellow-400/70 text-xs">
-                          ⏳ Waiting for all {eligibleCount} community members to approve ({voteYes}/{eligibleCount})
+                          ⏳ Waiting for all {eligibleCount} members to approve ({voteYes}/{eligibleCount})
                         </p>
                       )}
                     </div>
                   )}
 
-                  {/* STEP 3: All approved — show QR to scan with Pera treasury wallet */}
-                  {isCompleted && !isReleased && isProposer && (
-                    <div className="pl-8 pt-1 space-y-2">
+                  {/* STEP 3: All approved — Release Funds button */}
+                  {isCompleted && !isReleased && (
+                    <div className="pl-8 pt-2 space-y-2">
                       <p className="text-green-400 text-xs font-medium">✅ All {eligibleCount} members approved!</p>
-                      <Button
-                        size="sm"
-                        onClick={() => handleShowQR(i, amountAlgo)}
-                        disabled={releasingIdx === i}
-                        className="bg-purple-600 hover:bg-purple-700 text-white rounded-xl h-8 text-xs px-4 flex items-center gap-2"
-                      >
-                        <QrCodeIcon className="w-3 h-3" />
-                        {releasingIdx === i ? 'Building...' : `Scan QR to Release ${amountAlgo} ALGO`}
-                      </Button>
-                      <p className="text-white/30 text-xs">Opens Pera Wallet on the treasury account to sign</p>
+                      {isProposer ? (
+                        <>
+                          <Button
+                            size="sm"
+                            onClick={() => handleRelease(i, amountAlgo)}
+                            disabled={releasingIdx === i}
+                            className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-xl h-9 text-xs px-5 font-semibold shadow-lg shadow-purple-500/25"
+                          >
+                            {releasingIdx === i ? "⏳ Opening Pera Wallet..." : `💸 Release ${amountAlgo} ALGO`}
+                          </Button>
+                          <p className="text-white/30 text-xs">
+                            Pera Wallet will open — select the treasury account to sign the payment
+                          </p>
+                        </>
+                      ) : (
+                        <p className="text-yellow-400/70 text-xs">⏳ Awaiting proposer to release {amountAlgo} ALGO</p>
+                      )}
                     </div>
                   )}
-                  {isCompleted && !isReleased && !isProposer && (
-                    <p className="text-yellow-400/70 text-xs pl-8">⏳ Awaiting proposer to release {amountAlgo} ALGO</p>
-                  )}
 
-                  {/* Rejected — proposer can resubmit */}
+                  {/* Rejected — proposer resubmits */}
                   {isFailed && isProposer && (
                     <div className="pl-8 space-y-2 pt-1">
-                      <p className="text-red-400/70 text-xs">✗ Proof rejected by community. Submit updated proof:</p>
+                      <p className="text-red-400/70 text-xs">✗ Proof rejected. Submit updated proof:</p>
                       <textarea
                         placeholder="Update your proof with more details..."
                         value={proofInputs[i] || ""}
@@ -483,15 +453,13 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
                       </Button>
                     </div>
                   )}
-
                   {isFailed && !isProposer && (
-                    <p className="text-red-400/50 text-xs pl-8">✗ Proof was rejected. Waiting for proposer to resubmit.</p>
+                    <p className="text-red-400/50 text-xs pl-8">✗ Proof rejected. Waiting for proposer to resubmit.</p>
                   )}
 
                   {isLocked && (
                     <p className="text-xs text-white/30 pl-8">🔒 Unlocks after Milestone {i} funds are released</p>
                   )}
-
                   {isReleased && (
                     <p className="text-xs text-purple-400/70 pl-8">💸 {amountAlgo} ALGO released to proposer</p>
                   )}
@@ -515,56 +483,6 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
         </CardContent>
       </Card>
 
-      {/* QR Code modal — scan with Pera treasury wallet to sign & send */}
-      {qrModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
-          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setQrModal(null)} />
-          <div className="relative bg-gradient-to-br from-slate-800 to-slate-900 border border-white/10 rounded-3xl p-6 max-w-sm w-full shadow-2xl space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-white font-bold text-base">Scan with Pera Wallet</h2>
-              <button onClick={() => setQrModal(null)} className="text-white/40 hover:text-white">
-                <XIcon className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="space-y-1">
-              <p className="text-white/60 text-xs">This will send <span className="text-purple-300 font-semibold">{qrModal.amount} ALGO</span> from the treasury to the proposer.</p>
-              <p className="text-white/40 text-xs">Open Pera Wallet → tap the scan icon → scan this QR → confirm the transaction.</p>
-            </div>
-
-            {/* QR Code */}
-            <div className="bg-white p-4 rounded-2xl flex items-center justify-center">
-              <QRCode
-                value={qrModal.qrValue}
-                size={200}
-                style={{ height: 'auto', maxWidth: '100%', width: '100%' }}
-              />
-            </div>
-
-            <p className="text-white/30 text-xs text-center">Treasury: {TREASURY.slice(0,10)}...{TREASURY.slice(-6)}</p>
-
-            {/* After signing, paste the txId to confirm */}
-            <div className="space-y-2 pt-1">
-              <p className="text-white/60 text-xs font-medium">After Pera broadcasts the transaction, paste the Transaction ID here:</p>
-              <input
-                type="text"
-                placeholder="Paste Transaction ID (txId)..."
-                value={txIdInput}
-                onChange={e => setTxIdInput(e.target.value)}
-                className="w-full bg-white/5 border border-white/20 text-white placeholder-white/30 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-purple-500/50"
-              />
-              <Button
-                onClick={handleConfirmRelease}
-                disabled={!txIdInput.trim() || confirmingTx}
-                className="w-full bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-sm"
-              >
-                {confirmingTx ? '⏳ Confirming on chain...' : '✅ Confirm Release'}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Release success modal */}
       {releaseModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
@@ -582,7 +500,7 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
               <>
                 <h2 className="text-white font-bold text-xl">Milestone {releaseModal.idx + 1} Funded!</h2>
                 <p className="text-white/60 text-sm">
-                  <span className="text-purple-300 font-semibold">{releaseModal.amount} ALGO</span> released on-chain.
+                  <span className="text-purple-300 font-semibold">{releaseModal.amount} ALGO</span> sent to proposer.
                   {releaseModal.idx + 1 < milestones.length && (
                     <span className="block mt-1 text-blue-300">Milestone {releaseModal.idx + 2} is now unlocked!</span>
                   )}
