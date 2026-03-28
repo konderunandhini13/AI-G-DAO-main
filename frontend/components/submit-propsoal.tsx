@@ -16,6 +16,7 @@ import dynamic from "next/dynamic"
 import { TransactionResult } from "@/lib/transaction-builder"
 import { checkDuplicateProposal } from "@/lib/duplicate-detection"
 import { climateDAOQuery } from "@/lib/blockchain-queries"
+import { LocationPicker } from "@/components/location-picker"
 
 // Lazy load transaction components to improve initial page load
 const TransactionStatus = dynamic(() => import("@/components/transaction-status").then(mod => ({ default: mod.TransactionStatus })), {
@@ -302,14 +303,9 @@ export function SubmitProposalPage() {
                     <Label htmlFor="location" className="text-white font-medium text-sm">
                       Location *
                     </Label>
-                    <Input
-                      id="location"
-                      type="text"
-                      placeholder="City, Country"
+                    <LocationPicker
                       value={formData.location}
-                      onChange={(e) => handleInputChange("location", e.target.value)}
-                      required
-                      className="bg-white/5 border-white/20 text-white placeholder-white/40 focus:border-white/40 focus:ring-white/20 rounded-xl text-sm sm:text-base h-10 sm:h-12"
+                      onChange={(location) => handleInputChange("location", location)}
                     />
                   </div>
                 </div>
