@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test AI Analysis - Improved Version</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #1e3a8a 0%, #1e293b 100%);
+            color: white;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 30px;
+            backdrop-filter: blur(10px);
+        }
+        h1 {
+            color: #60a5fa;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            color: #93c5fd;
+            margin-bottom: 30px;
+        }
+        .test-section {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        button {
+            background: linear-gradient(135deg, #3b82f6 0%, #06b6d4 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        button:hover {
+            transform: scale(1.05);
+        }
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 14px;
+        }
+        .score {
+            font-size: 48px;
+            font-weight: bold;
+            margin: 20px 0;
+        }
+        .excellent { color: #10b981; }
+        .good { color: #fbbf24; }
+        .needs-improvement { color: #f97316; }
+        .poor { color: #ef4444; }
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .metric {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .metric-label {
+            color: #93c5fd;
+            font-size: 12px;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+        .metric-value {
+            font-size: 24px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 AI Analysis Test - Improved Version</h1>
+        <p class="subtitle">Test the enhanced AI analysis with accurate scoring</p>
+
+        <div class="test-section">
+            <h2>Test Scenarios</h2>
+            <p>Click a button to test different proposal types:</p>
+            <button onclick="testExcellentProposal()">🌟 Test Excellent Proposal (Expected: 85-95)</button>
+            <button onclick="testGoodProposal()">✅ Test Good Proposal (Expected: 70-80)</button>
+            <button onclick="testAverageProposal()">⚠️ Test Average Proposal (Expected: 60-70)</button>
+            <button onclick="testPoorProposal()">❌ Test Poor Proposal (Expected: 40-55)</button>
+        </div>
+
+        <div id="result" class="result" style="display: none;"></div>
+    </div>
+
+    <script>
+        const API_KEY = 'AIzaSyA8VVCkbC3EFjlcOg0r3Dwv42WUTsTXWH4';
+
+        async function analyzeProposal(title, description, category, fundingAmount, expectedImpact, location) {
+            const prompt = `You are an expert climate scientist and project evaluator. Analyze this climate proposal thoroughly and provide accurate scoring.
+
+PROPOSAL:
+Title: ${title}
+Category: ${category}
+Location: ${location}
+Funding: $${fundingAmount}
+Description: ${description}
+Expected Impact: ${expectedImpact}
+
+ANALYSIS CRITERIA:
+
+1. ENVIRONMENTAL IMPACT (0-100): Evaluate the potential climate benefit, carbon reduction, ecosystem restoration, or sustainability impact. Consider scale, measurability, and long-term effects.
+
+2. FEASIBILITY (0-100): Assess technical viability, resource requirements, timeline realism, team capability, and implementation challenges.
+
+3. INNOVATION (0-100): Determine novelty of approach, technological advancement, creative solutions, and differentiation from existing projects.
+
+4. OVERALL SCORE: Calculate weighted average (Environmental 40%, Feasibility 35%, Innovation 25%). Be objective and critical.
+
+5. REAL-WORLD COMPARISON: Identify 2-3 similar existing projects globally (e.g., Tesla Solar, Ocean Cleanup, Climeworks, Great Green Wall, etc.).
+
+6. INNOVATIVE ENHANCEMENTS: Suggest 3-5 specific features or approaches to make this proposal more unique and effective.
+
+SCORING GUIDELINES:
+- 90-100: Exceptional, groundbreaking impact
+- 80-89: Excellent, significant potential
+- 70-79: Good, solid proposal
+- 60-69: Moderate, needs improvement
+- 50-59: Weak, major concerns
+- Below 50: Poor, fundamental issues
+
+Respond ONLY with valid JSON (no markdown, no extra text):
+{
+  "score": <number 0-100>,
+  "category": "<excellent|good|needs-improvement|poor>",
+  "environmentalScore": <number 0-100>,
+  "feasibilityScore": <number 0-100>,
+  "innovationScore": <number 0-100>,
+  "isNovel": <boolean>,
+  "existingProjects": [{"name": "string", "description": "string", "similarity": "string", "successRate": "string"}],
+  "strengths": ["string"],
+  "concerns": ["string"],
+  "suggestions": ["string"],
+  "realWorldComparison": "string",
+  "recommendedChanges": ["string"],
+  "innovativeAddons": ["string"]
+}`;
+
+            const response = await fetch(
+                `https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key=${API_KEY}`,
+                {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: prompt }] }],
+                        generationConfig: {
+                            temperature: 0.4,
+                            maxOutputTokens: 3000,
+                            topP: 0.8,
+                            topK: 40
+                        }
+                    })
+                }
+            );
+
+            if (!response.ok) {
+                throw new Error(`API Error: ${response.status}`);
+            }
+
+            const data = await response.json();
+            const aiResponse = data.candidates?.[0]?.content?.parts?.[0]?.text;
+            
+            let cleanedResponse = aiResponse.trim();
+            cleanedResponse = cleanedResponse.replace(/```json\s*/g, '').replace(/```\s*/g, '');
+            
+            const jsonMatch = cleanedResponse.match(/\{[\s\S]*\}/);
+            if (!jsonMatch) {
+                throw new Error('Invalid JSON response');
+            }
+            
+            return JSON.parse(jsonMatch[0]);
+        }
+
+        function displayResult(result) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.style.display = 'block';
+            
+            const categoryClass = result.category.replace('-', '');
+            
+            resultDiv.innerHTML = `
+                <h2>Analysis Results</h2>
+                <div class="score ${categoryClass}">Score: ${result.score}/100</div>
+                <div class="metrics">
+                    <div class="metric">
+                        <div class="metric-label">Environmental Impact</div>
+                        <div class="metric-value">${result.environmentalScore}/100</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">Feasibility</div>
+                        <div class="metric-value">${result.feasibilityScore}/100</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">Innovation</div>
+                        <div class="metric-value">${result.innovationScore}/100</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">Category</div>
+                        <div class="metric-value ${categoryClass}">${result.category}</div>
+                    </div>
+                </div>
+                <h3>Strengths:</h3>
+                <ul>${result.strengths.map(s => `<li>${s}</li>`).join('')}</ul>
+                <h3>Concerns:</h3>
+                <ul>${result.concerns.map(c => `<li>${c}</li>`).join('')}</ul>
+                <h3>Suggestions:</h3>
+                <ul>${result.suggestions.map(s => `<li>${s}</li>`).join('')}</ul>
+                <h3>Full Response:</h3>
+                <pre>${JSON.stringify(result, null, 2)}</pre>
+            `;
+        }
+
+        async function runTest(title, description, category, fundingAmount, expectedImpact, location) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = '<div class="loading"></div> Analyzing proposal...';
+            
+            try {
+                const result = await analyzeProposal(title, description, category, fundingAmount, expectedImpact, location);
+                displayResult(result);
+            } catch (error) {
+                resultDiv.innerHTML = `<h2 style="color: #ef4444;">Error</h2><p>${error.message}</p>`;
+            }
+        }
+
+        function testExcellentProposal() {
+            runTest(
+                'Advanced Carbon Capture with AI-Optimized Direct Air Capture',
+                'Revolutionary carbon capture system using machine learning to optimize DAC efficiency by 40%. Combines novel sorbent materials with real-time AI monitoring to capture 10,000 tons CO2 annually. Includes blockchain-verified carbon credits and community education programs. Scalable design with modular deployment.',
+                'carbon-capture',
+                '500000',
+                'Remove 10,000 tons CO2/year, create 50 green jobs, reduce local air pollution by 30%, provide educational programs for 1000+ students annually',
+                'California, USA'
+            );
+        }
+
+        function testGoodProposal() {
+            runTest(
+                'Community Solar Farm for Rural Villages',
+                'Install 500kW solar farm to power 200 rural homes. Standard solar panels with battery storage. Local training program for maintenance. Expected to reduce diesel generator usage and provide reliable electricity.',
+                'renewable-energy',
+                '150000',
+                'Power 200 homes, reduce 300 tons CO2 annually, create 10 local jobs',
+                'Kenya'
+            );
+        }
+
+        function testAverageProposal() {
+            runTest(
+                'Tree Planting Initiative',
+                'Plant trees in local area to help the environment. We will plant various types of trees and maintain them. This will help reduce carbon and make the area greener.',
+                'reforestation',
+                '50000',
+                'Plant trees and help the environment',
+                'Various locations'
+            );
+        }
+
+        function testPoorProposal() {
+            runTest(
+                'Save the Planet',
+                'We want to do something good for climate. Need money to start. Will figure out details later.',
+                'other',
+                '1000000',
+                'Make things better',
+                'Everywhere'
+            );
+        }
+    </script>
+</body>
+</html>

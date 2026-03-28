@@ -1,0 +1,10 @@
+{
+  "network": "testnet",
+  "app_id": 744174033,
+  "app_address": "UHJZPXFR5QTC4K54F2CQXBDE2IJIT2SHFHZNAEYGELJ5ZZQFTQVKPN4ITA",
+  "deployer": "33FPGTKRHHYWOZQWNQB6EOA67O3UTIZKMXM7JUJDXPMHVWTWBL4L4HDBUU",
+  "dao_admin": "33FPGTKRHHYWOZQWNQB6EOA67O3UTIZKMXM7JUJDXPMHVWTWBL4L4HDBUU",
+  "dao_token_id": null,
+  "credit_token_id": null,
+  "deployment_time": "54483707"
+}

@@ -1,0 +1,21 @@
+{
+  "name": "AI-G-DAO",
+  "short_name": "AI-G-DAO",
+  "description": "AI-Governed DAO for Climate Impact on Algorand",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#14b8a6",
+  "icons": [
+    {
+      "src": "/icon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

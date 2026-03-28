@@ -1,0 +1,1557 @@
+{
+  "version": 3,
+  "sources": [
+    "contract.py"
+  ],
+  "mappings": ";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;AAaA;;;;;;AAAA;;;AAAA;;;;AAAA;;AAAA;AAAA;AAAA;;AAAA;;;AAAA;;;;;;;;;;;;;;;;;AAAA;;;AAAA;;;;;;;;AAAA;AAAA;;;;;;AAAA;;;AAAA;;;;AAAA;AAiEK;;AAAA;;AAAA;AAAA;;AAAA;AAAA;AAAA;;;AA7CA;;;AAAA;AAAA;AAAA;;AAAA;AAAA;AAAA;;;AAAA;AAAA;AAAA;AAAA;AAAA;AAAA;AAAA;;;AAAA;AAAA;AAAA;AAAA;AAAA;AAAA;AAOG;AAAA;;AAAA;AACA;;;;;;;;;;;;;;;;;;AAAA;;AAAA;AACA;AAA+B;AAA/B;AACA;;;;;;;;;;;;;AAAA;AAAA;AAVH;AAAA;AAYA;;;AAAA;AAAA;AAAA;AAAA;AAAA;AAAA;AAAA;;;AAAA;AAAA;AAAA;AAAA;AAAA;AAAA;AAMU;;AAAc;AAAA;AAAA;AAAA;AAAd;AAAA;;AAAA;AAAP;AACwB;AAAA;AAAA;AAAA;AAAjB;;AAAA;AAAP;AACA;;AAAA;AAEe;;AAAX;AAAkD;;AAAoB;;AAApB;AAAlD;AADJ;AAKA;AAGQ;;;;;;;;;AAHR;;;;;AAAA;AAO+C;AAAhB;AAA/B;AAAA;AAAA;AArBH;;;;;;;;;;;;;;;;AAAA;AAAA;AAAA;AA2BU;AAAA;AAAA;AAAA;AAFV;AAAA;AAAA;AAAA;AAAA;AAAA;AAAA;AAMqB;;AAAX;AAFV;AAAA;AAAA;AAAA;AAAA;AAAA;AAAA;AAMU;;AAAc;;AAAd;AAAP;AACA;AAGQ;;AAFK;;AACS;;AAAX;AAAiD;;AAAjD;AAEY;;;;;;;;AAJvB;;;;;AAAA;AAHH;AAAA",
+  "op_pc_offset": 0,
+  "pc_events": {
+    "1": {
+      "subroutine": "algopy.arc4.ARC4Contract.approval_program",
+      "params": {},
+      "block": "main",
+      "stack_in": [],
+      "op": "intcblock 1 8 0"
+    },
+    "6": {
+      "op": "bytecblock \"current_milestone\" \"proposer\" 0x151f7c75"
+    },
+    "40": {
+      "op": "pushbytes 0x24378d3c // method \"delete()void\"",
+      "defined_out": [
+        "Method(delete()void)"
+      ],
+      "stack_out": [
+        "Method(delete()void)"
+      ]
+    },
+    "46": {
+      "op": "txna ApplicationArgs 0",
+      "defined_out": [
+        "Method(delete()void)",
+        "tmp%0#1"
+      ],
+      "stack_out": [
+        "Method(delete()void)",
+        "tmp%0#1"
+      ]
+    },
+    "49": {
+      "op": "match main_delete_route@4",
+      "stack_out": []
+    },
+    "53": {
+      "block": "main_switch_case_next@5",
+      "stack_in": [],
+      "op": "txn OnCompletion",
+      "defined_out": [
+        "tmp%6#0"
+      ],
+      "stack_out": [
+        "tmp%6#0"
+      ]
+    },
+    "55": {
+      "op": "!",
+      "defined_out": [
+        "tmp%7#0"
+      ],
+      "stack_out": [
+        "tmp%7#0"
+      ]
+    },
+    "56": {
+      "op": "assert",
+      "stack_out": []
+    },
+    "57": {
+      "op": "txn ApplicationID",
+      "defined_out": [
+        "tmp%8#0"
+      ],
+      "stack_out": [
+        "tmp%8#0"
+      ]
+    },
+    "59": {
+      "op": "bz main_create_NoOp@11",
+      "stack_out": []
+    },
+    "62": {
+      "op": "pushbytess 0x8586ca27 0x27add51b 0xb910c77b // method \"release(uint64,uint64)string\", method \"get_current_milestone()uint64\", method \"get_balance()uint64\"",
+      "defined_out": [
+        "Method(get_balance()uint64)",
+        "Method(get_current_milestone()uint64)",
+        "Method(release(uint64,uint64)string)"
+      ],
+      "stack_out": [
+        "Method(release(uint64,uint64)string)",
+        "Method(get_current_milestone()uint64)",
+        "Method(get_balance()uint64)"
+      ]
+    },
+    "79": {
+      "op": "txna ApplicationArgs 0",
+      "defined_out": [
+        "Method(get_balance()uint64)",
+        "Method(get_current_milestone()uint64)",
+        "Method(release(uint64,uint64)string)",
+        "tmp%10#0"
+      ],
+      "stack_out": [
+        "Method(release(uint64,uint64)string)",
+        "Method(get_current_milestone()uint64)",
+        "Method(get_balance()uint64)",
+        "tmp%10#0"
+      ]
+    },
+    "82": {
+      "op": "match release get_current_milestone get_balance",
+      "stack_out": []
+    },
+    "90": {
+      "op": "err"
+    },
+    "91": {
+      "block": "main_create_NoOp@11",
+      "stack_in": [],
+      "op": "pushbytes 0xf8a58358 // method \"create(address,uint64,uint64)void\"",
+      "defined_out": [
+        "Method(create(address,uint64,uint64)void)"
+      ],
+      "stack_out": [
+        "Method(create(address,uint64,uint64)void)"
+      ]
+    },
+    "97": {
+      "op": "txna ApplicationArgs 0",
+      "defined_out": [
+        "Method(create(address,uint64,uint64)void)",
+        "tmp%11#0"
+      ],
+      "stack_out": [
+        "Method(create(address,uint64,uint64)void)",
+        "tmp%11#0"
+      ]
+    },
+    "100": {
+      "op": "match create",
+      "stack_out": []
+    },
+    "104": {
+      "op": "err"
+    },
+    "105": {
+      "block": "main_delete_route@4",
+      "stack_in": [],
+      "op": "txn OnCompletion",
+      "defined_out": [
+        "tmp%1#1"
+      ],
+      "stack_out": [
+        "tmp%1#1"
+      ]
+    },
+    "107": {
+      "op": "pushint 5 // DeleteApplication",
+      "defined_out": [
+        "DeleteApplication",
+        "tmp%1#1"
+      ],
+      "stack_out": [
+        "tmp%1#1",
+        "DeleteApplication"
+      ]
+    },
+    "109": {
+      "op": "==",
+      "defined_out": [
+        "tmp%2#0"
+      ],
+      "stack_out": [
+        "tmp%2#0"
+      ]
+    },
+    "110": {
+      "op": "txn ApplicationID",
+      "defined_out": [
+        "tmp%2#0",
+        "tmp%3#0"
+      ],
+      "stack_out": [
+        "tmp%2#0",
+        "tmp%3#0"
+      ]
+    },
+    "112": {
+      "op": "&&",
+      "defined_out": [
+        "tmp%5#0"
+      ],
+      "stack_out": [
+        "tmp%5#0"
+      ]
+    },
+    "113": {
+      "op": "assert",
+      "stack_out": []
+    },
+    "114": {
+      "op": "b delete"
+    },
+    "117": {
+      "subroutine": "smart_contracts.milestone_dao.contract.MilestoneDAO.create[routing]",
+      "params": {},
+      "block": "create",
+      "stack_in": [],
+      "op": "txna ApplicationArgs 1",
+      "defined_out": [
+        "proposer#0"
+      ],
+      "stack_out": [
+        "proposer#0"
+      ]
+    },
+    "120": {
+      "op": "dup",
+      "defined_out": [
+        "proposer#0",
+        "proposer#0 (copy)"
+      ],
+      "stack_out": [
+        "proposer#0",
+        "proposer#0 (copy)"
+      ]
+    },
+    "121": {
+      "op": "len",
+      "defined_out": [
+        "len%0#0",
+        "proposer#0"
+      ],
+      "stack_out": [
+        "proposer#0",
+        "len%0#0"
+      ]
+    },
+    "122": {
+      "op": "pushint 32",
+      "defined_out": [
+        "32",
+        "len%0#0",
+        "proposer#0"
+      ],
+      "stack_out": [
+        "proposer#0",
+        "len%0#0",
+        "32"
+      ]
+    },
+    "124": {
+      "op": "==",
+      "defined_out": [
+        "eq%0#0",
+        "proposer#0"
+      ],
+      "stack_out": [
+        "proposer#0",
+        "eq%0#0"
+      ]
+    },
+    "125": {
+      "error": "invalid number of bytes for arc4.static_array<arc4.uint8, 32>",
+      "op": "assert // invalid number of bytes for arc4.static_array<arc4.uint8, 32>",
+      "stack_out": [
+        "proposer#0"
+      ]
+    },
+    "126": {
+      "op": "txna ApplicationArgs 2",
+      "defined_out": [
+        "proposer#0",
+        "tmp%2#0"
+      ],
+      "stack_out": [
+        "proposer#0",
+        "tmp%2#0"
+      ]
+    },
+    "129": {
+      "op": "dup",
+      "defined_out": [
+        "proposer#0",
+        "tmp%2#0",
+        "tmp%2#0 (copy)"
+      ],
+      "stack_out": [
+        "proposer#0",
+        "tmp%2#0",
+        "tmp%2#0 (copy)"
+      ]
+    },
+    "130": {
+      "op": "len",
+      "defined_out": [
+        "len%1#0",
+        "proposer#0",
+        "tmp%2#0"
+      ],
+      "stack_out": [
+        "proposer#0",
+        "tmp%2#0",
+        "len%1#0"
+      ]
+    },
+    "131": {
+      "op": "intc_1 // 8",
+      "defined_out": [
+        "8",
+        "len%1#0",
+        "proposer#0",
+        "tmp%2#0"
+      ],
+      "stack_out": [
+        "proposer#0",
+        "tmp%2#0",
+        "len%1#0",
+        "8"
+      ]
+    },
+    "132": {
+      "op": "==",
+      "defined_out": [
+        "eq%1#0",
+        "proposer#0",
+        "tmp%2#0"
+      ],
+      "stack_out": [
+        "proposer#0",
+        "tmp%2#0",
+        "eq%1#0"
+      ]
+    },
+    "133": {
+      "error": "invalid number of bytes for arc4.uint64",
+      "op": "assert // invalid number of bytes for arc4.uint64",
+      "stack_out": [
+        "proposer#0",
+        "tmp%2#0"
+      ]
+    },
+    "134": {
+      "op": "btoi",
+      "defined_out": [
+        "proposer#0",
+        "total_milestones#0"
+      ],
+      "stack_out": [
+        "proposer#0",
+        "total_milestones#0"
+      ]
+    },
+    "135": {
+      "op": "txna ApplicationArgs 3",
+      "defined_out": [
+        "proposer#0",
+        "tmp%4#0",
+        "total_milestones#0"
+      ],
+      "stack_out": [
+        "proposer#0",
+        "total_milestones#0",
+        "tmp%4#0"
+      ]
+    },
+    "138": {
+      "op": "dup",
+      "defined_out": [
+        "proposer#0",
+        "tmp%4#0",
+        "tmp%4#0 (copy)",
+        "total_milestones#0"
+      ],
+      "stack_out": [
+        "proposer#0",
+        "total_milestones#0",
+        "tmp%4#0",
+        "tmp%4#0 (copy)"
+      ]
+    },
+    "139": {
+      "op": "len",
+      "defined_out": [
+        "len%2#0",
+        "proposer#0",
+        "tmp%4#0",
+        "total_milestones#0"
+      ],
+      "stack_out": [
+        "proposer#0",
+        "total_milestones#0",
+        "tmp%4#0",
+        "len%2#0"
+      ]
+    },
+    "140": {
+      "op": "intc_1 // 8",
+      "stack_out": [
+        "proposer#0",
+        "total_milestones#0",
+        "tmp%4#0",
+        "len%2#0",
+        "8"
+      ]
+    },
+    "141": {
+      "op": "==",
+      "defined_out": [
+        "eq%2#0",
+        "proposer#0",
+        "tmp%4#0",
+        "total_milestones#0"
+      ],
+      "stack_out": [
+        "proposer#0",
+        "total_milestones#0",
+        "tmp%4#0",
+        "eq%2#0"
+      ]
+    },
+    "142": {
+      "error": "invalid number of bytes for arc4.uint64",
+      "op": "assert // invalid number of bytes for arc4.uint64",
+      "stack_out": [
+        "proposer#0",
+        "total_milestones#0",
+        "tmp%4#0"
+      ]
+    },
+    "143": {
+      "op": "btoi",
+      "defined_out": [
+        "proposal_id#0",
+        "proposer#0",
+        "total_milestones#0"
+      ],
+      "stack_out": [
+        "proposer#0",
+        "total_milestones#0",
+        "proposal_id#0"
+      ]
+    },
+    "144": {
+      "op": "bytec_1 // \"proposer\"",
+      "defined_out": [
+        "\"proposer\"",
+        "proposal_id#0",
+        "proposer#0",
+        "total_milestones#0"
+      ],
+      "stack_out": [
+        "proposer#0",
+        "total_milestones#0",
+        "proposal_id#0",
+        "\"proposer\""
+      ]
+    },
+    "145": {
+      "op": "uncover 3",
+      "stack_out": [
+        "total_milestones#0",
+        "proposal_id#0",
+        "\"proposer\"",
+        "proposer#0"
+      ]
+    },
+    "147": {
+      "op": "app_global_put",
+      "stack_out": [
+        "total_milestones#0",
+        "proposal_id#0"
+      ]
+    },
+    "148": {
+      "op": "pushbytes \"total_milestones\"",
+      "defined_out": [
+        "\"total_milestones\"",
+        "proposal_id#0",
+        "total_milestones#0"
+      ],
+      "stack_out": [
+        "total_milestones#0",
+        "proposal_id#0",
+        "\"total_milestones\""
+      ]
+    },
+    "166": {
+      "op": "uncover 2",
+      "stack_out": [
+        "proposal_id#0",
+        "\"total_milestones\"",
+        "total_milestones#0"
+      ]
+    },
+    "168": {
+      "op": "app_global_put",
+      "stack_out": [
+        "proposal_id#0"
+      ]
+    },
+    "169": {
+      "op": "bytec_0 // \"current_milestone\"",
+      "defined_out": [
+        "\"current_milestone\"",
+        "proposal_id#0"
+      ],
+      "stack_out": [
+        "proposal_id#0",
+        "\"current_milestone\""
+      ]
+    },
+    "170": {
+      "op": "intc_2 // 0",
+      "defined_out": [
+        "\"current_milestone\"",
+        "0",
+        "proposal_id#0"
+      ],
+      "stack_out": [
+        "proposal_id#0",
+        "\"current_milestone\"",
+        "0"
+      ]
+    },
+    "171": {
+      "op": "app_global_put",
+      "stack_out": [
+        "proposal_id#0"
+      ]
+    },
+    "172": {
+      "op": "pushbytes \"proposal_id\"",
+      "defined_out": [
+        "\"proposal_id\"",
+        "proposal_id#0"
+      ],
+      "stack_out": [
+        "proposal_id#0",
+        "\"proposal_id\""
+      ]
+    },
+    "185": {
+      "op": "swap",
+      "stack_out": [
+        "\"proposal_id\"",
+        "proposal_id#0"
+      ]
+    },
+    "186": {
+      "op": "app_global_put",
+      "stack_out": []
+    },
+    "187": {
+      "op": "intc_0 // 1",
+      "defined_out": [
+        "1"
+      ],
+      "stack_out": [
+        "1"
+      ]
+    },
+    "188": {
+      "op": "return",
+      "stack_out": []
+    },
+    "189": {
+      "subroutine": "smart_contracts.milestone_dao.contract.MilestoneDAO.release[routing]",
+      "params": {},
+      "block": "release",
+      "stack_in": [],
+      "op": "txna ApplicationArgs 1",
+      "defined_out": [
+        "tmp%0#0"
+      ],
+      "stack_out": [
+        "tmp%0#0"
+      ]
+    },
+    "192": {
+      "op": "dup",
+      "defined_out": [
+        "tmp%0#0",
+        "tmp%0#0 (copy)"
+      ],
+      "stack_out": [
+        "tmp%0#0",
+        "tmp%0#0 (copy)"
+      ]
+    },
+    "193": {
+      "op": "len",
+      "defined_out": [
+        "len%0#0",
+        "tmp%0#0"
+      ],
+      "stack_out": [
+        "tmp%0#0",
+        "len%0#0"
+      ]
+    },
+    "194": {
+      "op": "intc_1 // 8",
+      "defined_out": [
+        "8",
+        "len%0#0",
+        "tmp%0#0"
+      ],
+      "stack_out": [
+        "tmp%0#0",
+        "len%0#0",
+        "8"
+      ]
+    },
+    "195": {
+      "op": "==",
+      "defined_out": [
+        "eq%0#0",
+        "tmp%0#0"
+      ],
+      "stack_out": [
+        "tmp%0#0",
+        "eq%0#0"
+      ]
+    },
+    "196": {
+      "error": "invalid number of bytes for arc4.uint64",
+      "op": "assert // invalid number of bytes for arc4.uint64",
+      "stack_out": [
+        "tmp%0#0"
+      ]
+    },
+    "197": {
+      "op": "btoi",
+      "defined_out": [
+        "milestone_idx#0"
+      ],
+      "stack_out": [
+        "milestone_idx#0"
+      ]
+    },
+    "198": {
+      "op": "txna ApplicationArgs 2",
+      "defined_out": [
+        "milestone_idx#0",
+        "tmp%2#0"
+      ],
+      "stack_out": [
+        "milestone_idx#0",
+        "tmp%2#0"
+      ]
+    },
+    "201": {
+      "op": "dup",
+      "defined_out": [
+        "milestone_idx#0",
+        "tmp%2#0",
+        "tmp%2#0 (copy)"
+      ],
+      "stack_out": [
+        "milestone_idx#0",
+        "tmp%2#0",
+        "tmp%2#0 (copy)"
+      ]
+    },
+    "202": {
+      "op": "len",
+      "defined_out": [
+        "len%1#0",
+        "milestone_idx#0",
+        "tmp%2#0"
+      ],
+      "stack_out": [
+        "milestone_idx#0",
+        "tmp%2#0",
+        "len%1#0"
+      ]
+    },
+    "203": {
+      "op": "intc_1 // 8",
+      "stack_out": [
+        "milestone_idx#0",
+        "tmp%2#0",
+        "len%1#0",
+        "8"
+      ]
+    },
+    "204": {
+      "op": "==",
+      "defined_out": [
+        "eq%1#0",
+        "milestone_idx#0",
+        "tmp%2#0"
+      ],
+      "stack_out": [
+        "milestone_idx#0",
+        "tmp%2#0",
+        "eq%1#0"
+      ]
+    },
+    "205": {
+      "error": "invalid number of bytes for arc4.uint64",
+      "op": "assert // invalid number of bytes for arc4.uint64",
+      "stack_out": [
+        "milestone_idx#0",
+        "tmp%2#0"
+      ]
+    },
+    "206": {
+      "op": "btoi",
+      "defined_out": [
+        "amount_microalgos#0",
+        "milestone_idx#0"
+      ],
+      "stack_out": [
+        "milestone_idx#0",
+        "amount_microalgos#0"
+      ]
+    },
+    "207": {
+      "op": "txn Sender",
+      "defined_out": [
+        "amount_microalgos#0",
+        "milestone_idx#0",
+        "tmp%0#1"
+      ],
+      "stack_out": [
+        "milestone_idx#0",
+        "amount_microalgos#0",
+        "tmp%0#1"
+      ]
+    },
+    "209": {
+      "op": "intc_2 // 0",
+      "defined_out": [
+        "0",
+        "amount_microalgos#0",
+        "milestone_idx#0",
+        "tmp%0#1"
+      ],
+      "stack_out": [
+        "milestone_idx#0",
+        "amount_microalgos#0",
+        "tmp%0#1",
+        "0"
+      ]
+    },
+    "210": {
+      "op": "bytec_1 // \"proposer\"",
+      "defined_out": [
+        "\"proposer\"",
+        "0",
+        "amount_microalgos#0",
+        "milestone_idx#0",
+        "tmp%0#1"
+      ],
+      "stack_out": [
+        "milestone_idx#0",
+        "amount_microalgos#0",
+        "tmp%0#1",
+        "0",
+        "\"proposer\""
+      ]
+    },
+    "211": {
+      "op": "app_global_get_ex",
+      "defined_out": [
+        "amount_microalgos#0",
+        "maybe_exists%0#0",
+        "maybe_value%0#0",
+        "milestone_idx#0",
+        "tmp%0#1"
+      ],
+      "stack_out": [
+        "milestone_idx#0",
+        "amount_microalgos#0",
+        "tmp%0#1",
+        "maybe_value%0#0",
+        "maybe_exists%0#0"
+      ]
+    },
+    "212": {
+      "error": "check self.proposer exists",
+      "op": "assert // check self.proposer exists",
+      "stack_out": [
+        "milestone_idx#0",
+        "amount_microalgos#0",
+        "tmp%0#1",
+        "maybe_value%0#0"
+      ]
+    },
+    "213": {
+      "op": "swap",
+      "stack_out": [
+        "milestone_idx#0",
+        "amount_microalgos#0",
+        "maybe_value%0#0",
+        "tmp%0#1"
+      ]
+    },
+    "214": {
+      "op": "dig 1",
+      "defined_out": [
+        "amount_microalgos#0",
+        "maybe_value%0#0",
+        "maybe_value%0#0 (copy)",
+        "milestone_idx#0",
+        "tmp%0#1"
+      ],
+      "stack_out": [
+        "milestone_idx#0",
+        "amount_microalgos#0",
+        "maybe_value%0#0",
+        "tmp%0#1",
+        "maybe_value%0#0 (copy)"
+      ]
+    },
+    "216": {
+      "op": "==",
+      "defined_out": [
+        "amount_microalgos#0",
+        "maybe_value%0#0",
+        "milestone_idx#0",
+        "tmp%1#1"
+      ],
+      "stack_out": [
+        "milestone_idx#0",
+        "amount_microalgos#0",
+        "maybe_value%0#0",
+        "tmp%1#1"
+      ]
+    },
+    "217": {
+      "error": "Only proposer can release",
+      "op": "assert // Only proposer can release",
+      "stack_out": [
+        "milestone_idx#0",
+        "amount_microalgos#0",
+        "maybe_value%0#0"
+      ]
+    },
+    "218": {
+      "op": "intc_2 // 0",
+      "stack_out": [
+        "milestone_idx#0",
+        "amount_microalgos#0",
+        "maybe_value%0#0",
+        "0"
+      ]
+    },
+    "219": {
+      "op": "bytec_0 // \"current_milestone\"",
+      "defined_out": [
+        "\"current_milestone\"",
+        "0",
+        "amount_microalgos#0",
+        "maybe_value%0#0",
+        "milestone_idx#0"
+      ],
+      "stack_out": [
+        "milestone_idx#0",
+        "amount_microalgos#0",
+        "maybe_value%0#0",
+        "0",
+        "\"current_milestone\""
+      ]
+    },
+    "220": {
+      "op": "app_global_get_ex",
+      "defined_out": [
+        "amount_microalgos#0",
+        "maybe_exists%1#0",
+        "maybe_value%0#0",
+        "maybe_value%1#0",
+        "milestone_idx#0"
+      ],
+      "stack_out": [
+        "milestone_idx#0",
+        "amount_microalgos#0",
+        "maybe_value%0#0",
+        "maybe_value%1#0",
+        "maybe_exists%1#0"
+      ]
+    },
+    "221": {
+      "error": "check self.current_milestone exists",
+      "op": "assert // check self.current_milestone exists",
+      "stack_out": [
+        "milestone_idx#0",
+        "amount_microalgos#0",
+        "maybe_value%0#0",
+        "maybe_value%1#0"
+      ]
+    },
+    "222": {
+      "op": "dig 3",
+      "defined_out": [
+        "amount_microalgos#0",
+        "maybe_value%0#0",
+        "maybe_value%1#0",
+        "milestone_idx#0",
+        "milestone_idx#0 (copy)"
+      ],
+      "stack_out": [
+        "milestone_idx#0",
+        "amount_microalgos#0",
+        "maybe_value%0#0",
+        "maybe_value%1#0",
+        "milestone_idx#0 (copy)"
+      ]
+    },
+    "224": {
+      "op": "==",
+      "defined_out": [
+        "amount_microalgos#0",
+        "maybe_value%0#0",
+        "milestone_idx#0",
+        "tmp%2#1"
+      ],
+      "stack_out": [
+        "milestone_idx#0",
+        "amount_microalgos#0",
+        "maybe_value%0#0",
+        "tmp%2#1"
+      ]
+    },
+    "225": {
+      "error": "Not the active milestone",
+      "op": "assert // Not the active milestone",
+      "stack_out": [
+        "milestone_idx#0",
+        "amount_microalgos#0",
+        "maybe_value%0#0"
+      ]
+    },
+    "226": {
+      "op": "dig 1",
+      "defined_out": [
+        "amount_microalgos#0",
+        "amount_microalgos#0 (copy)",
+        "maybe_value%0#0",
+        "milestone_idx#0"
+      ],
+      "stack_out": [
+        "milestone_idx#0",
+        "amount_microalgos#0",
+        "maybe_value%0#0",
+        "amount_microalgos#0 (copy)"
+      ]
+    },
+    "228": {
+      "error": "Amount must be positive",
+      "op": "assert // Amount must be positive",
+      "stack_out": [
+        "milestone_idx#0",
+        "amount_microalgos#0",
+        "maybe_value%0#0"
+      ]
+    },
+    "229": {
+      "op": "global CurrentApplicationAddress",
+      "defined_out": [
+        "amount_microalgos#0",
+        "maybe_value%0#0",
+        "milestone_idx#0",
+        "tmp%4#1"
+      ],
+      "stack_out": [
+        "milestone_idx#0",
+        "amount_microalgos#0",
+        "maybe_value%0#0",
+        "tmp%4#1"
+      ]
+    },
+    "231": {
+      "op": "balance",
+      "defined_out": [
+        "amount_microalgos#0",
+        "maybe_value%0#0",
+        "milestone_idx#0",
+        "tmp%5#1"
+      ],
+      "stack_out": [
+        "milestone_idx#0",
+        "amount_microalgos#0",
+        "maybe_value%0#0",
+        "tmp%5#1"
+      ]
+    },
+    "232": {
+      "op": "dig 2",
+      "stack_out": [
+        "milestone_idx#0",
+        "amount_microalgos#0",
+        "maybe_value%0#0",
+        "tmp%5#1",
+        "amount_microalgos#0 (copy)"
+      ]
+    },
+    "234": {
+      "op": "global MinTxnFee",
+      "defined_out": [
+        "amount_microalgos#0",
+        "amount_microalgos#0 (copy)",
+        "maybe_value%0#0",
+        "milestone_idx#0",
+        "tmp%5#1",
+        "tmp%6#0"
+      ],
+      "stack_out": [
+        "milestone_idx#0",
+        "amount_microalgos#0",
+        "maybe_value%0#0",
+        "tmp%5#1",
+        "amount_microalgos#0 (copy)",
+        "tmp%6#0"
+      ]
+    },
+    "236": {
+      "op": "+",
+      "defined_out": [
+        "amount_microalgos#0",
+        "maybe_value%0#0",
+        "milestone_idx#0",
+        "tmp%5#1",
+        "tmp%7#0"
+      ],
+      "stack_out": [
+        "milestone_idx#0",
+        "amount_microalgos#0",
+        "maybe_value%0#0",
+        "tmp%5#1",
+        "tmp%7#0"
+      ]
+    },
+    "237": {
+      "op": ">=",
+      "defined_out": [
+        "amount_microalgos#0",
+        "maybe_value%0#0",
+        "milestone_idx#0",
+        "tmp%8#0"
+      ],
+      "stack_out": [
+        "milestone_idx#0",
+        "amount_microalgos#0",
+        "maybe_value%0#0",
+        "tmp%8#0"
+      ]
+    },
+    "238": {
+      "error": "Insufficient contract balance",
+      "op": "assert // Insufficient contract balance",
+      "stack_out": [
+        "milestone_idx#0",
+        "amount_microalgos#0",
+        "maybe_value%0#0"
+      ]
+    },
+    "239": {
+      "op": "itxn_begin"
+    },
+    "240": {
+      "op": "global MinTxnFee",
+      "defined_out": [
+        "amount_microalgos#0",
+        "inner_txn_params%0%%param_Fee_idx_0#0",
+        "maybe_value%0#0",
+        "milestone_idx#0"
+      ],
+      "stack_out": [
+        "milestone_idx#0",
+        "amount_microalgos#0",
+        "maybe_value%0#0",
+        "inner_txn_params%0%%param_Fee_idx_0#0"
+      ]
+    },
+    "242": {
+      "op": "uncover 2",
+      "stack_out": [
+        "milestone_idx#0",
+        "maybe_value%0#0",
+        "inner_txn_params%0%%param_Fee_idx_0#0",
+        "amount_microalgos#0"
+      ]
+    },
+    "244": {
+      "op": "itxn_field Amount",
+      "stack_out": [
+        "milestone_idx#0",
+        "maybe_value%0#0",
+        "inner_txn_params%0%%param_Fee_idx_0#0"
+      ]
+    },
+    "246": {
+      "op": "swap",
+      "stack_out": [
+        "milestone_idx#0",
+        "inner_txn_params%0%%param_Fee_idx_0#0",
+        "maybe_value%0#0"
+      ]
+    },
+    "247": {
+      "op": "itxn_field Receiver",
+      "stack_out": [
+        "milestone_idx#0",
+        "inner_txn_params%0%%param_Fee_idx_0#0"
+      ]
+    },
+    "249": {
+      "op": "intc_0 // pay",
+      "defined_out": [
+        "inner_txn_params%0%%param_Fee_idx_0#0",
+        "milestone_idx#0",
+        "pay"
+      ],
+      "stack_out": [
+        "milestone_idx#0",
+        "inner_txn_params%0%%param_Fee_idx_0#0",
+        "pay"
+      ]
+    },
+    "250": {
+      "op": "itxn_field TypeEnum",
+      "stack_out": [
+        "milestone_idx#0",
+        "inner_txn_params%0%%param_Fee_idx_0#0"
+      ]
+    },
+    "252": {
+      "op": "itxn_field Fee",
+      "stack_out": [
+        "milestone_idx#0"
+      ]
+    },
+    "254": {
+      "op": "itxn_submit"
+    },
+    "255": {
+      "op": "intc_0 // 1",
+      "defined_out": [
+        "1",
+        "milestone_idx#0"
+      ],
+      "stack_out": [
+        "milestone_idx#0",
+        "1"
+      ]
+    },
+    "256": {
+      "op": "+",
+      "defined_out": [
+        "tmp%9#0"
+      ],
+      "stack_out": [
+        "tmp%9#0"
+      ]
+    },
+    "257": {
+      "op": "bytec_0 // \"current_milestone\"",
+      "stack_out": [
+        "tmp%9#0",
+        "\"current_milestone\""
+      ]
+    },
+    "258": {
+      "op": "swap",
+      "stack_out": [
+        "\"current_milestone\"",
+        "tmp%9#0"
+      ]
+    },
+    "259": {
+      "op": "app_global_put",
+      "stack_out": []
+    },
+    "260": {
+      "op": "pushbytes 0x151f7c75000872656c6561736564",
+      "defined_out": [
+        "0x151f7c75000872656c6561736564"
+      ],
+      "stack_out": [
+        "0x151f7c75000872656c6561736564"
+      ]
+    },
+    "276": {
+      "op": "log",
+      "stack_out": []
+    },
+    "277": {
+      "op": "intc_0 // 1",
+      "stack_out": [
+        "1"
+      ]
+    },
+    "278": {
+      "op": "return",
+      "stack_out": []
+    },
+    "279": {
+      "subroutine": "smart_contracts.milestone_dao.contract.MilestoneDAO.get_current_milestone[routing]",
+      "params": {},
+      "block": "get_current_milestone",
+      "stack_in": [],
+      "op": "intc_2 // 0",
+      "defined_out": [
+        "0"
+      ],
+      "stack_out": [
+        "0"
+      ]
+    },
+    "280": {
+      "op": "bytec_0 // \"current_milestone\"",
+      "defined_out": [
+        "\"current_milestone\"",
+        "0"
+      ],
+      "stack_out": [
+        "0",
+        "\"current_milestone\""
+      ]
+    },
+    "281": {
+      "op": "app_global_get_ex",
+      "defined_out": [
+        "maybe_exists%0#0",
+        "maybe_value%0#0"
+      ],
+      "stack_out": [
+        "maybe_value%0#0",
+        "maybe_exists%0#0"
+      ]
+    },
+    "282": {
+      "error": "check self.current_milestone exists",
+      "op": "assert // check self.current_milestone exists",
+      "stack_out": [
+        "maybe_value%0#0"
+      ]
+    },
+    "283": {
+      "op": "itob",
+      "defined_out": [
+        "aggregate%val_as_bytes%0#0"
+      ],
+      "stack_out": [
+        "aggregate%val_as_bytes%0#0"
+      ]
+    },
+    "284": {
+      "op": "bytec_2 // 0x151f7c75",
+      "defined_out": [
+        "0x151f7c75",
+        "aggregate%val_as_bytes%0#0"
+      ],
+      "stack_out": [
+        "aggregate%val_as_bytes%0#0",
+        "0x151f7c75"
+      ]
+    },
+    "285": {
+      "op": "swap",
+      "stack_out": [
+        "0x151f7c75",
+        "aggregate%val_as_bytes%0#0"
+      ]
+    },
+    "286": {
+      "op": "concat",
+      "defined_out": [
+        "tmp%2#0"
+      ],
+      "stack_out": [
+        "tmp%2#0"
+      ]
+    },
+    "287": {
+      "op": "log",
+      "stack_out": []
+    },
+    "288": {
+      "op": "intc_0 // 1",
+      "defined_out": [
+        "1"
+      ],
+      "stack_out": [
+        "1"
+      ]
+    },
+    "289": {
+      "op": "return",
+      "stack_out": []
+    },
+    "290": {
+      "subroutine": "smart_contracts.milestone_dao.contract.MilestoneDAO.get_balance[routing]",
+      "params": {},
+      "block": "get_balance",
+      "stack_in": [],
+      "op": "global CurrentApplicationAddress",
+      "defined_out": [
+        "tmp%0#1"
+      ],
+      "stack_out": [
+        "tmp%0#1"
+      ]
+    },
+    "292": {
+      "op": "balance",
+      "defined_out": [
+        "tmp%1#1"
+      ],
+      "stack_out": [
+        "tmp%1#1"
+      ]
+    },
+    "293": {
+      "op": "itob",
+      "defined_out": [
+        "aggregate%val_as_bytes%0#0"
+      ],
+      "stack_out": [
+        "aggregate%val_as_bytes%0#0"
+      ]
+    },
+    "294": {
+      "op": "bytec_2 // 0x151f7c75",
+      "defined_out": [
+        "0x151f7c75",
+        "aggregate%val_as_bytes%0#0"
+      ],
+      "stack_out": [
+        "aggregate%val_as_bytes%0#0",
+        "0x151f7c75"
+      ]
+    },
+    "295": {
+      "op": "swap",
+      "stack_out": [
+        "0x151f7c75",
+        "aggregate%val_as_bytes%0#0"
+      ]
+    },
+    "296": {
+      "op": "concat",
+      "defined_out": [
+        "tmp%2#0"
+      ],
+      "stack_out": [
+        "tmp%2#0"
+      ]
+    },
+    "297": {
+      "op": "log",
+      "stack_out": []
+    },
+    "298": {
+      "op": "intc_0 // 1",
+      "defined_out": [
+        "1"
+      ],
+      "stack_out": [
+        "1"
+      ]
+    },
+    "299": {
+      "op": "return",
+      "stack_out": []
+    },
+    "300": {
+      "subroutine": "smart_contracts.milestone_dao.contract.MilestoneDAO.delete[routing]",
+      "params": {},
+      "block": "delete",
+      "stack_in": [],
+      "op": "txn Sender",
+      "defined_out": [
+        "tmp%0#0"
+      ],
+      "stack_out": [
+        "tmp%0#0"
+      ]
+    },
+    "302": {
+      "op": "global CreatorAddress",
+      "defined_out": [
+        "tmp%0#0",
+        "tmp%1#0"
+      ],
+      "stack_out": [
+        "tmp%0#0",
+        "tmp%1#0"
+      ]
+    },
+    "304": {
+      "op": "==",
+      "defined_out": [
+        "tmp%2#0"
+      ],
+      "stack_out": [
+        "tmp%2#0"
+      ]
+    },
+    "305": {
+      "error": "Only creator can delete",
+      "op": "assert // Only creator can delete",
+      "stack_out": []
+    },
+    "306": {
+      "op": "itxn_begin"
+    },
+    "307": {
+      "op": "global MinTxnFee",
+      "defined_out": [
+        "inner_txn_params%0%%param_Fee_idx_0#0"
+      ],
+      "stack_out": [
+        "inner_txn_params%0%%param_Fee_idx_0#0"
+      ]
+    },
+    "309": {
+      "op": "global CreatorAddress",
+      "defined_out": [
+        "inner_txn_params%0%%param_Fee_idx_0#0",
+        "inner_txn_params%0%%param_Receiver_idx_0#0"
+      ],
+      "stack_out": [
+        "inner_txn_params%0%%param_Fee_idx_0#0",
+        "inner_txn_params%0%%param_Receiver_idx_0#0"
+      ]
+    },
+    "311": {
+      "op": "global CurrentApplicationAddress",
+      "defined_out": [
+        "inner_txn_params%0%%param_Fee_idx_0#0",
+        "inner_txn_params%0%%param_Receiver_idx_0#0",
+        "tmp%3#0"
+      ],
+      "stack_out": [
+        "inner_txn_params%0%%param_Fee_idx_0#0",
+        "inner_txn_params%0%%param_Receiver_idx_0#0",
+        "tmp%3#0"
+      ]
+    },
+    "313": {
+      "op": "balance",
+      "defined_out": [
+        "inner_txn_params%0%%param_Fee_idx_0#0",
+        "inner_txn_params%0%%param_Receiver_idx_0#0",
+        "tmp%4#0"
+      ],
+      "stack_out": [
+        "inner_txn_params%0%%param_Fee_idx_0#0",
+        "inner_txn_params%0%%param_Receiver_idx_0#0",
+        "tmp%4#0"
+      ]
+    },
+    "314": {
+      "op": "global MinTxnFee",
+      "defined_out": [
+        "inner_txn_params%0%%param_Fee_idx_0#0",
+        "inner_txn_params%0%%param_Receiver_idx_0#0",
+        "tmp%4#0",
+        "tmp%5#0"
+      ],
+      "stack_out": [
+        "inner_txn_params%0%%param_Fee_idx_0#0",
+        "inner_txn_params%0%%param_Receiver_idx_0#0",
+        "tmp%4#0",
+        "tmp%5#0"
+      ]
+    },
+    "316": {
+      "op": "-",
+      "defined_out": [
+        "inner_txn_params%0%%param_Amount_idx_0#0",
+        "inner_txn_params%0%%param_Fee_idx_0#0",
+        "inner_txn_params%0%%param_Receiver_idx_0#0"
+      ],
+      "stack_out": [
+        "inner_txn_params%0%%param_Fee_idx_0#0",
+        "inner_txn_params%0%%param_Receiver_idx_0#0",
+        "inner_txn_params%0%%param_Amount_idx_0#0"
+      ]
+    },
+    "317": {
+      "op": "global CreatorAddress",
+      "defined_out": [
+        "inner_txn_params%0%%param_Amount_idx_0#0",
+        "inner_txn_params%0%%param_CloseRemainderTo_idx_0#0",
+        "inner_txn_params%0%%param_Fee_idx_0#0",
+        "inner_txn_params%0%%param_Receiver_idx_0#0"
+      ],
+      "stack_out": [
+        "inner_txn_params%0%%param_Fee_idx_0#0",
+        "inner_txn_params%0%%param_Receiver_idx_0#0",
+        "inner_txn_params%0%%param_Amount_idx_0#0",
+        "inner_txn_params%0%%param_CloseRemainderTo_idx_0#0"
+      ]
+    },
+    "319": {
+      "op": "itxn_field CloseRemainderTo",
+      "stack_out": [
+        "inner_txn_params%0%%param_Fee_idx_0#0",
+        "inner_txn_params%0%%param_Receiver_idx_0#0",
+        "inner_txn_params%0%%param_Amount_idx_0#0"
+      ]
+    },
+    "321": {
+      "op": "itxn_field Amount",
+      "stack_out": [
+        "inner_txn_params%0%%param_Fee_idx_0#0",
+        "inner_txn_params%0%%param_Receiver_idx_0#0"
+      ]
+    },
+    "323": {
+      "op": "itxn_field Receiver",
+      "stack_out": [
+        "inner_txn_params%0%%param_Fee_idx_0#0"
+      ]
+    },
+    "325": {
+      "op": "intc_0 // pay",
+      "defined_out": [
+        "inner_txn_params%0%%param_Fee_idx_0#0",
+        "pay"
+      ],
+      "stack_out": [
+        "inner_txn_params%0%%param_Fee_idx_0#0",
+        "pay"
+      ]
+    },
+    "326": {
+      "op": "itxn_field TypeEnum",
+      "stack_out": [
+        "inner_txn_params%0%%param_Fee_idx_0#0"
+      ]
+    },
+    "328": {
+      "op": "itxn_field Fee",
+      "stack_out": []
+    },
+    "330": {
+      "op": "itxn_submit"
+    },
+    "331": {
+      "op": "intc_0 // 1",
+      "defined_out": [
+        "1"
+      ],
+      "stack_out": [
+        "1"
+      ]
+    },
+    "332": {
+      "op": "return",
+      "stack_out": []
+    }
+  }
+}
