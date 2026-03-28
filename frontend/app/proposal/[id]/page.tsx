@@ -18,7 +18,7 @@ import {
 } from "lucide-react"
 import { MilestoneFunding } from "@/components/milestone-funding"
 
-const TREASURY = process.env.NEXT_PUBLIC_TREASURY_WALLET!
+const TREASURY = process.env.NEXT_PUBLIC_TREASURY_WALLET || ''
 const algodClient = new algosdk.Algodv2('', 'https://testnet-api.algonode.cloud', '')
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -370,7 +370,7 @@ export default function ProposalDetailPage() {
                     <CoinsIcon className="w-5 h-5 text-purple-400 shrink-0" />
                     <div className="flex-1">
                       <p className="text-purple-300 font-semibold text-sm">DAO Treasury</p>
-                      <p className="text-purple-200/70 text-xs font-mono">{TREASURY.slice(0,8)}...{TREASURY.slice(-6)}</p>
+                      <p className="text-purple-200/70 text-xs font-mono">{TREASURY ? `${TREASURY.slice(0,8)}...${TREASURY.slice(-6)}` : 'DAO Treasury'}</p>
                     </div>
                     <div className="text-right">
                       <p className="text-purple-300 font-bold text-sm">{treasuryBalance.toFixed(2)} ALGO</p>

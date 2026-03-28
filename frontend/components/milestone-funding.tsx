@@ -8,7 +8,7 @@ import { ChevronRightIcon, CoinsIcon } from "lucide-react"
 import { useWalletContext } from "@/hooks/use-wallet"
 import algosdk from "algosdk"
 
-const TREASURY = process.env.NEXT_PUBLIC_TREASURY_WALLET!
+const TREASURY = process.env.NEXT_PUBLIC_TREASURY_WALLET || ''
 const algodClient = new algosdk.Algodv2("", "https://testnet-api.algonode.cloud", "")
 
 interface MilestoneFundingProps {
