@@ -4,8 +4,9 @@ import { useState, useEffect, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { ChevronRightIcon, CoinsIcon } from "lucide-react"
+import { ChevronRightIcon, CoinsIcon, QrCodeIcon, XIcon } from "lucide-react"
 import { useWalletContext } from "@/hooks/use-wallet"
+import QRCode from "react-qr-code"
 import algosdk from "algosdk"
 
 const TREASURY = '5TVL4FSSJ7OL245FRMZALZQICP3CTRT262S7YUFTLK3ZBBBFVKELOEV5XM'
@@ -27,6 +28,9 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
   const [votingIdx, setVotingIdx] = useState<number | null>(null)
   const [releasingIdx, setReleasingIdx] = useState<number | null>(null)
   const [releaseModal, setReleaseModal] = useState<{ idx: number; amount: number; txId: string; allDone: boolean } | null>(null)
+  const [qrModal, setQrModal] = useState<{ idx: number; amount: number; qrValue: string; txnB64: string } | null>(null)
+  const [txIdInput, setTxIdInput] = useState('')
+  const [confirmingTx, setConfirmingTx] = useState(false)
   const [myVotes, setMyVotes] = useState<Record<number, "for" | "against">>({})
   const [proofInputs, setProofInputs] = useState<Record<number, string>>({})
   const [submittingProof, setSubmittingProof] = useState<number | null>(null)
@@ -215,18 +219,8 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
     }
   }
 
-  // Proposer releases funds — must connect treasury wallet in Pera first
-  const handleRelease = async (milestoneIdx: number, amountAlgo: number) => {
-    if (!address || !signTransaction) return
-
-    // Must be connected as treasury wallet to sign the payment
-    if (address !== TREASURY) {
-      alert(
-        `To release funds, please switch to the DAO Treasury wallet in Pera Wallet.\n\nTreasury address:\n${TREASURY}\n\nSteps:\n1. Open Pera Wallet\n2. Switch to the treasury account\n3. Come back and click Release again`
-      )
-      return
-    }
-
+  // Build unsigned txn and show QR code for Pera to scan
+  const handleShowQR = async (milestoneIdx: number, amountAlgo: number) => {
     setReleasingIdx(milestoneIdx)
     try {
       const params = await algodClient.getTransactionParams().do()
@@ -237,28 +231,41 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
         suggestedParams: params,
         note: new Uint8Array(Buffer.from(`EcoNexus milestone ${milestoneIdx + 1} release - proposal ${proposalId}`)),
       })
+      const encoded = algosdk.encodeUnsignedTransaction(txn)
+      const b64 = Buffer.from(encoded).toString('base64')
+      // Pera deep link to sign a raw unsigned txn
+      const peraDeepLink = `perawallet://sign-transaction?transaction=${encodeURIComponent(b64)}`
+      setQrModal({ idx: milestoneIdx, amount: amountAlgo, qrValue: peraDeepLink, txnB64: b64 })
+      setTxIdInput('')
+    } catch (err: any) {
+      alert(`Failed to build transaction: ${err.message}`)
+    } finally {
+      setReleasingIdx(null)
+    }
+  }
 
-      const signed = await signTransaction(txn)
-      const sendRes = await algodClient.sendRawTransaction(signed).do()
-      const txId = sendRes.txid || sendRes.txId || String(sendRes)
-      await algosdk.waitForConfirmation(algodClient, txId, 10)
+  // After Pera signs and broadcasts, proposer pastes the txId to confirm
+  const handleConfirmRelease = async () => {
+    if (!qrModal || !txIdInput.trim()) return
+    setConfirmingTx(true)
+    try {
+      // Wait for confirmation on chain
+      await algosdk.waitForConfirmation(algodClient, txIdInput.trim(), 10)
 
-      // Record release in DB
+      const { idx, amount } = qrModal
       await fetch('/api/treasury', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ proposalId, milestoneIdx, amountAlgo, txId }),
+        body: JSON.stringify({ proposalId, milestoneIdx: idx, amountAlgo: amount, txId: txIdInput.trim() }),
       })
 
-      // Update milestone statuses: current → released, next → active
       const pRes = await fetch(`/api/proposals/${proposalId}`)
       const freshP = await pRes.json()
       const finalMilestones = (freshP.milestones || []).map((m: any, i: number) => {
-        if (i === milestoneIdx) return { ...m, status: 'released' }
-        if (i === milestoneIdx + 1 && m.status === 'locked') return { ...m, status: 'active' }
+        if (i === idx) return { ...m, status: 'released' }
+        if (i === idx + 1 && m.status === 'locked') return { ...m, status: 'active' }
         return m
       })
-
       await fetch('/api/proposals', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -266,19 +273,19 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
       })
 
       setMilestones(finalMilestones)
-      const nextReleased = [...releasedMilestones, milestoneIdx]
+      const nextReleased = [...releasedMilestones, idx]
       setReleasedMilestones(nextReleased)
-      setTreasuryBalance(prev => prev !== null ? prev - amountAlgo : null)
+      setTreasuryBalance(prev => prev !== null ? prev - amount : null)
+      setQrModal(null)
       setReleaseModal({
-        idx: milestoneIdx,
-        amount: amountAlgo,
-        txId: typeof txId === 'string' ? txId : String(txId),
+        idx, amount,
+        txId: txIdInput.trim(),
         allDone: nextReleased.length >= milestones.length,
       })
     } catch (err: any) {
-      alert(`Release failed: ${err.message}`)
+      alert(`Confirmation failed: ${err.message}`)
     } finally {
-      setReleasingIdx(null)
+      setConfirmingTx(false)
     }
   }
 
@@ -439,43 +446,24 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
                     </div>
                   )}
 
-                  {/* STEP 3: All approved — proposer gets Release Fund button */}
-                  {isCompleted && !isReleased && (
+                  {/* STEP 3: All approved — show QR to scan with Pera treasury wallet */}
+                  {isCompleted && !isReleased && isProposer && (
                     <div className="pl-8 pt-1 space-y-2">
-                      <p className="text-green-400 text-xs font-medium">
-                        ✅ All {eligibleCount} members approved!
-                      </p>
-                      {isProposer && address !== TREASURY && (
-                        <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-3 space-y-2">
-                          <p className="text-yellow-300 text-xs font-medium">💡 To release funds:</p>
-                          <p className="text-white/60 text-xs">Switch to the DAO Treasury wallet in Pera, then come back and click Release.</p>
-                          <p className="text-white/30 text-xs font-mono truncate">Treasury: {TREASURY.slice(0,10)}...{TREASURY.slice(-6)}</p>
-                          <Button
-                            size="sm"
-                            onClick={() => handleRelease(i, amountAlgo)}
-                            className="bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-300 border border-yellow-500/30 rounded-xl h-8 text-xs px-4"
-                          >
-                            🔑 Switch to Treasury &amp; Release
-                          </Button>
-                        </div>
-                      )}
-                      {address === TREASURY && (
-                        <>
-                          <Button
-                            size="sm"
-                            onClick={() => handleRelease(i, amountAlgo)}
-                            disabled={releasingIdx === i}
-                            className="bg-purple-600 hover:bg-purple-700 text-white rounded-xl h-8 text-xs px-4"
-                          >
-                            {releasingIdx === i ? '⏳ Confirm in Pera...' : `💸 Release ${amountAlgo} ALGO to Proposer`}
-                          </Button>
-                          <p className="text-white/30 text-xs">Pera will ask you to confirm the payment</p>
-                        </>
-                      )}
-                      {!isProposer && (
-                        <p className="text-yellow-400/70 text-xs">⏳ Awaiting proposer to release {amountAlgo} ALGO</p>
-                      )}
+                      <p className="text-green-400 text-xs font-medium">✅ All {eligibleCount} members approved!</p>
+                      <Button
+                        size="sm"
+                        onClick={() => handleShowQR(i, amountAlgo)}
+                        disabled={releasingIdx === i}
+                        className="bg-purple-600 hover:bg-purple-700 text-white rounded-xl h-8 text-xs px-4 flex items-center gap-2"
+                      >
+                        <QrCodeIcon className="w-3 h-3" />
+                        {releasingIdx === i ? 'Building...' : `Scan QR to Release ${amountAlgo} ALGO`}
+                      </Button>
+                      <p className="text-white/30 text-xs">Opens Pera Wallet on the treasury account to sign</p>
                     </div>
+                  )}
+                  {isCompleted && !isReleased && !isProposer && (
+                    <p className="text-yellow-400/70 text-xs pl-8">⏳ Awaiting proposer to release {amountAlgo} ALGO</p>
                   )}
 
                   {/* Rejected — proposer can resubmit */}
@@ -526,6 +514,56 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
           )}
         </CardContent>
       </Card>
+
+      {/* QR Code modal — scan with Pera treasury wallet to sign & send */}
+      {qrModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setQrModal(null)} />
+          <div className="relative bg-gradient-to-br from-slate-800 to-slate-900 border border-white/10 rounded-3xl p-6 max-w-sm w-full shadow-2xl space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-white font-bold text-base">Scan with Pera Wallet</h2>
+              <button onClick={() => setQrModal(null)} className="text-white/40 hover:text-white">
+                <XIcon className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-1">
+              <p className="text-white/60 text-xs">This will send <span className="text-purple-300 font-semibold">{qrModal.amount} ALGO</span> from the treasury to the proposer.</p>
+              <p className="text-white/40 text-xs">Open Pera Wallet → tap the scan icon → scan this QR → confirm the transaction.</p>
+            </div>
+
+            {/* QR Code */}
+            <div className="bg-white p-4 rounded-2xl flex items-center justify-center">
+              <QRCode
+                value={qrModal.qrValue}
+                size={200}
+                style={{ height: 'auto', maxWidth: '100%', width: '100%' }}
+              />
+            </div>
+
+            <p className="text-white/30 text-xs text-center">Treasury: {TREASURY.slice(0,10)}...{TREASURY.slice(-6)}</p>
+
+            {/* After signing, paste the txId to confirm */}
+            <div className="space-y-2 pt-1">
+              <p className="text-white/60 text-xs font-medium">After Pera broadcasts the transaction, paste the Transaction ID here:</p>
+              <input
+                type="text"
+                placeholder="Paste Transaction ID (txId)..."
+                value={txIdInput}
+                onChange={e => setTxIdInput(e.target.value)}
+                className="w-full bg-white/5 border border-white/20 text-white placeholder-white/30 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-purple-500/50"
+              />
+              <Button
+                onClick={handleConfirmRelease}
+                disabled={!txIdInput.trim() || confirmingTx}
+                className="w-full bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-sm"
+              >
+                {confirmingTx ? '⏳ Confirming on chain...' : '✅ Confirm Release'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Release success modal */}
       {releaseModal && (
