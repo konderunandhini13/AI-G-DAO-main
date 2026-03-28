@@ -21,7 +21,7 @@ interface MilestoneFundingProps {
 export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, initialMilestones }: MilestoneFundingProps) {
   const { address, signTransaction } = useWalletContext()
   const [milestones, setMilestones] = useState<any[]>(initialMilestones || [])
-  const [memberCount, setMemberCount] = useState(0)
+  const [eligibleCount, setEligibleCount] = useState(1) // members excluding proposer
   const [treasuryBalance, setTreasuryBalance] = useState<number | null>(null)
   const [releasedMilestones, setReleasedMilestones] = useState<number[]>([])
   const [votingIdx, setVotingIdx] = useState<number | null>(null)
@@ -31,14 +31,13 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
   const [proofInputs, setProofInputs] = useState<Record<number, string>>({})
   const [submittingProof, setSubmittingProof] = useState<number | null>(null)
 
-
   const isProposer = address === proposalCreator
-  const voteThreshold = memberCount > 1 ? memberCount - 1 : 1 // all non-proposer members must vote
 
   useEffect(() => {
     if (initialMilestones?.length) setMilestones(initialMilestones)
   }, [initialMilestones])
 
+  // Fetch my votes for this proposal
   const fetchMyVotes = useCallback(async () => {
     if (!address || !proposalId) return
     try {
@@ -52,6 +51,7 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
     } catch {}
   }, [address, proposalId])
 
+  // Fetch all data and recompute milestone statuses from DB votes
   const fetchBackground = useCallback(async () => {
     try {
       const [mRes, tRes, pRes, allVotesRes] = await Promise.all([
@@ -61,32 +61,50 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
         fetch(`/api/milestone-votes?proposalId=${proposalId}`),
       ])
 
+      // Eligible voters = all members except proposer
       let threshold = 1
       if (mRes.ok) {
         const md = await mRes.json()
         const eligible = (md.members || []).filter((m: any) => m.address !== proposalCreator)
-        threshold = eligible.length > 0 ? eligible.length : 1
-        setMemberCount(md.count || (md.members || []).length || 0)
+        // If members API returns no list, use count - 1
+        const eligibleNum = md.members
+          ? eligible.length
+          : Math.max(1, (md.count || 1) - 1)
+        threshold = eligibleNum > 0 ? eligibleNum : 1
+        setEligibleCount(threshold)
       }
-      if (tRes.ok) { const td = await tRes.json(); setTreasuryBalance(td.balanceAlgo); setReleasedMilestones(td.released || []) }
+
+      if (tRes.ok) {
+        const td = await tRes.json()
+        setTreasuryBalance(td.balanceAlgo)
+        setReleasedMilestones(td.released || [])
+      }
 
       if (pRes.ok && allVotesRes.ok) {
         const p = await pRes.json()
         const allVotesData = await allVotesRes.json()
         if (p.milestones?.length) {
-          // Recompute voteYes/voteNo/status from DB votes (source of truth)
           const recomputed = p.milestones.map((m: any, i: number) => {
             const mv = (allVotesData.votes || []).filter((v: any) => v.milestone_idx === i)
             const dbYes = mv.filter((v: any) => v.vote === "for").length
             const dbNo = mv.filter((v: any) => v.vote === "against").length
-            const dbTotal = dbYes + dbNo
-            // Only recompute status for pending_proof milestones
+
+            // Only recompute status when proof is pending
             if (m.status !== "pending_proof") return { ...m, voteYes: dbYes, voteNo: dbNo }
-            const newStatus = dbNo > 0 ? "failed" : dbTotal >= threshold ? "completed" : "pending_proof"
+
+            // Any rejection = failed; all eligible voted yes = completed
+            let newStatus = m.status
+            if (dbNo > 0) {
+              newStatus = "failed"
+            } else if (dbYes >= threshold) {
+              newStatus = "completed"
+            }
             return { ...m, voteYes: dbYes, voteNo: dbNo, status: newStatus }
           })
+
           setMilestones(recomputed)
-          // If any milestone status changed, persist it to DB
+
+          // Persist status changes to DB if anything changed
           const changed = recomputed.some((m: any, i: number) => m.status !== p.milestones[i].status)
           if (changed) {
             fetch("/api/proposals", {
@@ -101,14 +119,15 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
   }, [proposalId, proposalCreator])
 
   useEffect(() => {
-    fetchMyVotes(); fetchBackground()
+    fetchMyVotes()
+    fetchBackground()
     const interval = setInterval(() => { fetchBackground(); fetchMyVotes() }, 5000)
     return () => clearInterval(interval)
   }, [fetchBackground, fetchMyVotes])
 
   useEffect(() => { setMyVotes({}); fetchMyVotes() }, [address, fetchMyVotes])
 
-  // Proposer submits proof after completing milestone work
+  // Proposer submits proof of completion
   const handleSubmitProof = async (milestoneIdx: number) => {
     const proof = proofInputs[milestoneIdx]?.trim()
     if (!proof) return alert("Please describe your proof of completion.")
@@ -116,15 +135,15 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
     try {
       const pRes = await fetch(`/api/proposals/${proposalId}`)
       const fresh = await pRes.json()
-      const updated = (fresh.milestones || []).map((m: any, i: number) => {
-        if (i !== milestoneIdx) return m
-        return { ...m, status: "pending_proof", proof }
-      })
+      const updated = (fresh.milestones || []).map((m: any, i: number) =>
+        i !== milestoneIdx ? m : { ...m, status: "pending_proof", proof, voteYes: 0, voteNo: 0 }
+      )
       await fetch("/api/proposals", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: proposalId, milestones: updated }),
       })
+      // Clear old milestone votes for this milestone so fresh voting starts
       setMilestones(updated)
       setProofInputs(prev => ({ ...prev, [milestoneIdx]: "" }))
     } catch (err: any) {
@@ -134,12 +153,11 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
     }
   }
 
-  // Community votes to approve/reject proof
+  // Community member votes to approve/reject proof
   const handleVote = async (milestoneIdx: number, vote: "for" | "against") => {
     if (!address || isProposer) return
     setVotingIdx(milestoneIdx)
     try {
-      // 1. Save vote to DB first
       const voteRes = await fetch("/api/milestone-votes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -147,7 +165,7 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
       })
       if (!voteRes.ok) throw new Error("Failed to record vote")
 
-      // 2. Fetch fresh milestone votes count + member count from DB
+      // Fetch fresh counts from DB
       const [allVotesRes, mRes, pRes] = await Promise.all([
         fetch(`/api/milestone-votes?proposalId=${proposalId}`),
         fetch("/api/members"),
@@ -157,22 +175,27 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
       const fresh = await pRes.json()
       const freshMilestones = fresh.milestones || []
 
-      // Count votes for this milestone from DB (source of truth)
       const milestoneVotes = (allVotesData.votes || []).filter((v: any) => v.milestone_idx === milestoneIdx)
       const dbYes = milestoneVotes.filter((v: any) => v.vote === "for").length
       const dbNo = milestoneVotes.filter((v: any) => v.vote === "against").length
-      const dbTotal = dbYes + dbNo
 
-      let threshold = 1
+      let threshold = eligibleCount
       if (mRes.ok) {
         const md = await mRes.json()
-        const eligible = (md.members || []).filter((m: any) => m.address !== proposalCreator)
-        threshold = eligible.length > 0 ? eligible.length : 1
+        const eligible = md.members
+          ? (md.members || []).filter((m: any) => m.address !== proposalCreator).length
+          : Math.max(1, (md.count || 1) - 1)
+        threshold = eligible > 0 ? eligible : 1
+        setEligibleCount(threshold)
       }
 
-      const allVoted = dbTotal >= threshold
-      // any reject = failed immediately; all voted + all yes = completed
-      const newStatus = dbNo > 0 ? "failed" : allVoted && dbNo === 0 ? "completed" : freshMilestones[milestoneIdx]?.status
+      // Any rejection = failed; all eligible voted yes = completed
+      let newStatus = freshMilestones[milestoneIdx]?.status
+      if (dbNo > 0) {
+        newStatus = "failed"
+      } else if (dbYes >= threshold) {
+        newStatus = "completed"
+      }
 
       const updated = freshMilestones.map((m: any, i: number) =>
         i !== milestoneIdx ? m : { ...m, voteYes: dbYes, voteNo: dbNo, status: newStatus }
@@ -192,7 +215,7 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
     }
   }
 
-  // Proposer releases funds after community approves proof
+  // Proposer releases funds after community fully approves
   const handleRelease = async (milestoneIdx: number, amountAlgo: number) => {
     if (!address || !signTransaction) return
     setReleasingIdx(milestoneIdx)
@@ -215,24 +238,29 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ proposalId, milestoneIdx, amountAlgo, txId }),
       })
+
       const pRes = await fetch(`/api/proposals/${proposalId}`)
       const freshP = await pRes.json()
       const finalMilestones = (freshP.milestones || []).map((m: any, i: number) => {
         if (i === milestoneIdx) return { ...m, status: "released" }
+        // Unlock the next milestone
         if (i === milestoneIdx + 1 && m.status === "locked") return { ...m, status: "active" }
         return m
       })
+
       await fetch("/api/proposals", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: proposalId, milestones: finalMilestones }),
       })
+
       setMilestones(finalMilestones)
       const nextReleased = [...releasedMilestones, milestoneIdx]
       setReleasedMilestones(nextReleased)
       setTreasuryBalance(prev => prev !== null ? prev - amountAlgo : null)
       setReleaseModal({
-        idx: milestoneIdx, amount: amountAlgo,
+        idx: milestoneIdx,
+        amount: amountAlgo,
         txId: typeof txId === "string" ? txId : String(txId),
         allDone: nextReleased.length >= milestones.length,
       })
@@ -259,8 +287,10 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
             <span className="text-white/40 text-xs">{releasedCount}/{milestones.length} released</span>
           </div>
           <div className="h-1.5 bg-white/10 rounded-full overflow-hidden mt-2">
-            <div className="h-full bg-gradient-to-r from-purple-500 to-pink-500 rounded-full transition-all duration-700"
-              style={{ width: `${milestones.length > 0 ? (releasedCount / milestones.length) * 100 : 0}%` }} />
+            <div
+              className="h-full bg-gradient-to-r from-purple-500 to-pink-500 rounded-full transition-all duration-700"
+              style={{ width: `${milestones.length > 0 ? (releasedCount / milestones.length) * 100 : 0}%` }}
+            />
           </div>
         </CardHeader>
 
@@ -278,14 +308,18 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
             const voteNo = m.voteNo || 0
             const totalVotes = voteYes + voteNo
             const myVote = myVotes[i]
-            // Community votes on proof — only when proof submitted
+
+            // Only non-proposer community members can vote on proof
             const canVote = isPendingProof && !isProposer && !myVote && !!address
 
+            // Release button: only proposer, only after ALL eligible members approved
+            const canRelease = isCompleted && !isReleased && isProposer && voteYes >= eligibleCount && voteNo === 0
+
             const statusLabel = isReleased ? "💸 Released"
-              : isCompleted ? "✅ Approved"
+              : isCompleted ? "✅ Approved — Ready to Release"
               : isFailed ? "✗ Rejected"
               : isLocked ? "🔒 Locked"
-              : isPendingProof ? "📋 Proof Submitted"
+              : isPendingProof ? `📋 Proof Submitted (${voteYes}/${eligibleCount} approved)`
               : "⏳ Active"
 
             const statusColor = isReleased ? "bg-purple-500/20 text-purple-400 border-purple-500/30"
@@ -305,6 +339,7 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
             return (
               <div key={i}>
                 <div className={`rounded-2xl border p-4 space-y-2 transition-all ${cardBg}`}>
+                  {/* Header row */}
                   <div className="flex items-center justify-between gap-2 flex-wrap">
                     <div className="flex items-center gap-2">
                       <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
@@ -322,7 +357,7 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
 
                   {m.description && <p className="text-white/50 text-xs pl-8">{m.description}</p>}
 
-                  {/* STEP 1: Active — proposer completes work, then submits proof */}
+                  {/* STEP 1: Active — proposer does the work then submits proof */}
                   {isActive && isProposer && (
                     <div className="pl-8 space-y-2 pt-1">
                       <p className="text-blue-300 text-xs font-medium">📝 Complete this milestone then submit your proof:</p>
@@ -344,18 +379,33 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
                     <p className="text-white/30 text-xs pl-8">⏳ Waiting for proposer to complete work and submit proof...</p>
                   )}
 
-                  {/* STEP 2: Proof submitted — community votes to approve/reject */}
+                  {/* STEP 2: Proof submitted — community votes */}
                   {isPendingProof && (
                     <div className="pl-8 space-y-2 pt-1">
                       <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-3">
                         <p className="text-yellow-400 text-xs font-medium mb-1">📋 Proof submitted by proposer:</p>
                         <p className="text-white/70 text-xs">{m.proof}</p>
                       </div>
+
+                      {/* Vote progress bar */}
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-xs text-white/40">
+                          <span>{voteYes} of {eligibleCount} members approved</span>
+                          {voteNo > 0 && <span className="text-red-400">{voteNo} rejected</span>}
+                        </div>
+                        <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-green-500 rounded-full transition-all"
+                            style={{ width: `${eligibleCount > 0 ? (voteYes / eligibleCount) * 100 : 0}%` }}
+                          />
+                        </div>
+                      </div>
+
                       {canVote && (
                         <div className="flex gap-2">
                           <Button size="sm" onClick={() => handleVote(i, "for")} disabled={votingIdx === i}
                             className="flex-1 bg-green-500/20 hover:bg-green-500/30 text-green-400 border border-green-500/30 rounded-xl h-8 text-xs">
-                            {votingIdx === i ? "..." : "✓ Approve & Release"}
+                            {votingIdx === i ? "..." : "✓ Approve"}
                           </Button>
                           <Button size="sm" onClick={() => handleVote(i, "against")} disabled={votingIdx === i}
                             className="flex-1 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 rounded-xl h-8 text-xs">
@@ -363,40 +413,53 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
                           </Button>
                         </div>
                       )}
+
                       {myVote && (
                         <p className={`text-xs ${myVote === "for" ? "text-green-400/70" : "text-red-400/70"}`}>
-                          ✓ You voted {myVote === "for" ? "Approve" : "Reject"} — {totalVotes}/{voteThreshold} members voted
+                          ✓ You voted {myVote === "for" ? "Approve" : "Reject"}
                         </p>
                       )}
-                      {!myVote && !isProposer && !!address && (
-                        <p className="text-white/30 text-xs">{totalVotes}/{voteThreshold} members voted · all must approve</p>
-                      )}
+
                       {isProposer && (
-                        <p className="text-yellow-400/70 text-xs">⏳ Waiting for all community members to approve ({totalVotes}/{voteThreshold})</p>
+                        <p className="text-yellow-400/70 text-xs">
+                          ⏳ Waiting for all {eligibleCount} community members to approve ({voteYes}/{eligibleCount})
+                        </p>
                       )}
                     </div>
                   )}
 
-                  {/* STEP 3: Approved — proposer releases funds */}
+                  {/* STEP 3: All approved — proposer gets Release Fund button */}
                   {isCompleted && !isReleased && (
                     <div className="pl-8 pt-1 space-y-1">
-                      {isProposer ? (
+                      {canRelease ? (
                         <>
-                          <Button size="sm" onClick={() => handleRelease(i, amountAlgo)} disabled={releasingIdx === i}
-                            className="bg-purple-600 hover:bg-purple-700 text-white rounded-xl h-8 text-xs px-4">
+                          <p className="text-green-400 text-xs font-medium">
+                            ✅ All {eligibleCount} members approved! You can now release the funds.
+                          </p>
+                          <Button
+                            size="sm"
+                            onClick={() => handleRelease(i, amountAlgo)}
+                            disabled={releasingIdx === i}
+                            className="bg-purple-600 hover:bg-purple-700 text-white rounded-xl h-8 text-xs px-4"
+                          >
                             {releasingIdx === i ? "⏳ Confirm in Pera..." : `💸 Release ${amountAlgo} ALGO`}
                           </Button>
                           <p className="text-white/30 text-xs">Treasury wallet will be prompted in Pera</p>
                         </>
+                      ) : isProposer ? (
+                        <p className="text-yellow-400/70 text-xs">
+                          ⏳ Waiting for all members to approve before you can release funds ({voteYes}/{eligibleCount})
+                        </p>
                       ) : (
                         <p className="text-yellow-400/70 text-xs">⏳ Awaiting proposer to release {amountAlgo} ALGO</p>
                       )}
                     </div>
                   )}
 
+                  {/* Rejected — proposer can resubmit */}
                   {isFailed && isProposer && (
                     <div className="pl-8 space-y-2 pt-1">
-                      <p className="text-red-400/70 text-xs">✗ Proof rejected. Submit updated proof:</p>
+                      <p className="text-red-400/70 text-xs">✗ Proof rejected by community. Submit updated proof:</p>
                       <textarea
                         placeholder="Update your proof with more details..."
                         value={proofInputs[i] || ""}
@@ -409,6 +472,10 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
                         {submittingProof === i ? "Submitting..." : "📤 Resubmit Proof"}
                       </Button>
                     </div>
+                  )}
+
+                  {isFailed && !isProposer && (
+                    <p className="text-red-400/50 text-xs pl-8">✗ Proof was rejected. Waiting for proposer to resubmit.</p>
                   )}
 
                   {isLocked && (
@@ -438,6 +505,7 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
         </CardContent>
       </Card>
 
+      {/* Release success modal */}
       {releaseModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setReleaseModal(null)} />
@@ -448,19 +516,22 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
             {releaseModal.allDone ? (
               <>
                 <h2 className="text-white font-bold text-xl">All Funds Released!</h2>
-                <p className="text-white/60 text-sm">All {milestones.length} milestones completed.</p>
+                <p className="text-white/60 text-sm">All {milestones.length} milestones completed. 🎉</p>
               </>
             ) : (
               <>
                 <h2 className="text-white font-bold text-xl">Milestone {releaseModal.idx + 1} Funded!</h2>
                 <p className="text-white/60 text-sm">
                   <span className="text-purple-300 font-semibold">{releaseModal.amount} ALGO</span> released on-chain.
+                  {releaseModal.idx + 1 < milestones.length && (
+                    <span className="block mt-1 text-blue-300">Milestone {releaseModal.idx + 2} is now unlocked!</span>
+                  )}
                 </p>
               </>
             )}
             <p className="text-white/20 text-xs font-mono truncate">TX: {releaseModal.txId.slice(0, 24)}...</p>
             <Button onClick={() => setReleaseModal(null)} className="w-full bg-purple-600 hover:bg-purple-700 text-white rounded-xl">
-              {releaseModal.allDone ? "🎉 Done" : "Continue"}
+              {releaseModal.allDone ? "🎉 Done" : "Continue →"}
             </Button>
           </div>
         </div>

@@ -103,12 +103,20 @@ export default function ProposalDetailPage() {
           }
         }
         setProposal(p)
-        // Auto-pass proposal if 2+ yes votes
-        if (p && p.status === 'active' && p.voteYes >= 2 && p.voteYes > p.voteNo) {
-          await fetch('/api/proposals', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: p.id, status: 'passed' }) })
-          p = { ...p, status: 'passed' }
-          setProposal(p)
-        }
+        // Auto-pass proposal if majority of members voted yes
+        try {
+          const mRes = await fetch('/api/members')
+          if (mRes.ok) {
+            const md = await mRes.json()
+            const totalMembers = md.count || 1
+            const majority = Math.floor(totalMembers / 2) + 1
+            if (p && p.status === 'active' && p.voteYes >= majority && p.voteYes > p.voteNo) {
+              await fetch('/api/proposals', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: p.id, status: 'passed' }) })
+              p = { ...p, status: 'passed' }
+              setProposal(p)
+            }
+          }
+        } catch {}
         // Load treasury balance + released milestones
         try {
           const t = await fetch(`/api/treasury?proposalId=${proposalId}`)
@@ -324,11 +332,11 @@ export default function ProposalDetailPage() {
                 </Card>
 
                 {/* Passed banner */}
-                {(proposal.status === 'passed' || (proposal.voteYes >= 2 && proposal.voteYes > proposal.voteNo)) && (
+                {proposal.status === 'passed' && (
                   <div className="bg-green-500/10 border border-green-500/30 rounded-2xl px-4 py-3 flex items-center gap-3">
                     <CoinsIcon className="w-5 h-5 text-green-400 shrink-0" />
                     <div>
-                      <p className="text-green-400 font-semibold text-sm">Proposal Approved!</p>
+                      <p className="text-green-400 font-semibold text-sm">Proposal Approved by Majority!</p>
                       <p className="text-green-300/70 text-xs">${proposal.fundingAmount.toLocaleString()} approved. Funding released in milestones.</p>
                     </div>
                   </div>
@@ -357,7 +365,7 @@ export default function ProposalDetailPage() {
                 )}
 
                 {/* Treasury balance */}
-                {(proposal.status === 'passed' || (proposal.voteYes >= 2 && proposal.voteYes > proposal.voteNo)) && treasuryBalance !== null && (
+                {proposal.status === 'passed' && treasuryBalance !== null && (
                   <div className="bg-purple-500/10 border border-purple-500/30 rounded-2xl px-4 py-3 flex items-center gap-3">
                     <CoinsIcon className="w-5 h-5 text-purple-400 shrink-0" />
                     <div className="flex-1">
@@ -372,7 +380,7 @@ export default function ProposalDetailPage() {
                 )}
 
                 {/* ── MILESTONE FUNDING (sequential unlock) ── */}
-                {(proposal.status === 'passed' || (proposal.voteYes >= 2 && proposal.voteYes > proposal.voteNo)) && (
+                {proposal.status === 'passed' && (
                   <>
                     {/* Proposer hasn't defined milestones yet */}
                     {!proposal.milestones && address === proposal.creator && !showMilestoneForm && (
