@@ -18,7 +18,7 @@ import {
 } from "lucide-react"
 import { MilestoneFunding } from "@/components/milestone-funding"
 
-const TREASURY = process.env.NEXT_PUBLIC_TREASURY_WALLET || ''
+const TREASURY = '5TVL4FSSJ7OL245FRMZALZQICP3CTRT262S7YUFTLK3ZBBBFVKELOEV5XM'
 const algodClient = new algosdk.Algodv2('', 'https://testnet-api.algonode.cloud', '')
 
 const CATEGORY_COLORS: Record<string, string> = {

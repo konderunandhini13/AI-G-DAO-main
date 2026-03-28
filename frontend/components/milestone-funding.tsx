@@ -8,6 +8,7 @@ import { ChevronRightIcon, CoinsIcon } from "lucide-react"
 import { useWalletContext } from "@/hooks/use-wallet"
 import algosdk from "algosdk"
 
+const TREASURY = '5TVL4FSSJ7OL245FRMZALZQICP3CTRT262S7YUFTLK3ZBBBFVKELOEV5XM'
 const algodClient = new algosdk.Algodv2("", "https://testnet-api.algonode.cloud", "")
 
 interface MilestoneFundingProps {
@@ -214,20 +215,29 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
     }
   }
 
-  // Proposer releases funds after community fully approves
+  // Proposer releases funds — must connect treasury wallet in Pera first
   const handleRelease = async (milestoneIdx: number, amountAlgo: number) => {
     if (!address || !signTransaction) return
+
+    // Must be connected as treasury wallet to sign the payment
+    if (address !== TREASURY) {
+      alert(
+        `To release funds, please switch to the DAO Treasury wallet in Pera Wallet.\n\nTreasury address:\n${TREASURY}\n\nSteps:\n1. Open Pera Wallet\n2. Switch to the treasury account\n3. Come back and click Release again`
+      )
+      return
+    }
+
     setReleasingIdx(milestoneIdx)
     try {
-      // Proposer signs a self-transaction as on-chain proof of release claim
       const params = await algodClient.getTransactionParams().do()
       const txn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-        sender: address,
-        receiver: address,
-        amount: 0,
+        sender: TREASURY,
+        receiver: proposalCreator,
+        amount: Math.round(amountAlgo * 1_000_000),
         suggestedParams: params,
-        note: new Uint8Array(Buffer.from(`EcoNexus milestone ${milestoneIdx + 1} release claim - proposal ${proposalId}`)),
+        note: new Uint8Array(Buffer.from(`EcoNexus milestone ${milestoneIdx + 1} release - proposal ${proposalId}`)),
       })
+
       const signed = await signTransaction(txn)
       const sendRes = await algodClient.sendRawTransaction(signed).do()
       const txId = sendRes.txid || sendRes.txId || String(sendRes)
@@ -431,27 +441,38 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
 
                   {/* STEP 3: All approved — proposer gets Release Fund button */}
                   {isCompleted && !isReleased && (
-                    <div className="pl-8 pt-1 space-y-1">
-                      {canRelease ? (
+                    <div className="pl-8 pt-1 space-y-2">
+                      <p className="text-green-400 text-xs font-medium">
+                        ✅ All {eligibleCount} members approved!
+                      </p>
+                      {isProposer && address !== TREASURY && (
+                        <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-3 space-y-2">
+                          <p className="text-yellow-300 text-xs font-medium">💡 To release funds:</p>
+                          <p className="text-white/60 text-xs">Switch to the DAO Treasury wallet in Pera, then come back and click Release.</p>
+                          <p className="text-white/30 text-xs font-mono truncate">Treasury: {TREASURY.slice(0,10)}...{TREASURY.slice(-6)}</p>
+                          <Button
+                            size="sm"
+                            onClick={() => handleRelease(i, amountAlgo)}
+                            className="bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-300 border border-yellow-500/30 rounded-xl h-8 text-xs px-4"
+                          >
+                            🔑 Switch to Treasury &amp; Release
+                          </Button>
+                        </div>
+                      )}
+                      {address === TREASURY && (
                         <>
-                          <p className="text-green-400 text-xs font-medium">
-                            ✅ All {eligibleCount} members approved! You can now release the funds.
-                          </p>
                           <Button
                             size="sm"
                             onClick={() => handleRelease(i, amountAlgo)}
                             disabled={releasingIdx === i}
                             className="bg-purple-600 hover:bg-purple-700 text-white rounded-xl h-8 text-xs px-4"
                           >
-                            {releasingIdx === i ? "⏳ Confirm in Pera..." : `💸 Release ${amountAlgo} ALGO`}
+                            {releasingIdx === i ? '⏳ Confirm in Pera...' : `💸 Release ${amountAlgo} ALGO to Proposer`}
                           </Button>
-                          <p className="text-white/30 text-xs">Treasury wallet will be prompted in Pera</p>
+                          <p className="text-white/30 text-xs">Pera will ask you to confirm the payment</p>
                         </>
-                      ) : isProposer ? (
-                        <p className="text-yellow-400/70 text-xs">
-                          ⏳ Waiting for all members to approve before you can release funds ({voteYes}/{eligibleCount})
-                        </p>
-                      ) : (
+                      )}
+                      {!isProposer && (
                         <p className="text-yellow-400/70 text-xs">⏳ Awaiting proposer to release {amountAlgo} ALGO</p>
                       )}
                     </div>
