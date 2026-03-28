@@ -1,21 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Pool } from 'pg';
 
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false },
+});
+
+async function ensureTable() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS dao_members (
+      address text PRIMARY KEY,
+      joined_at bigint NOT NULL,
+      last_seen bigint NOT NULL
+    )
+  `);
+}
 
 export async function GET() {
   try {
-    const client = await pool.connect();
-    const result = await client.query('SELECT address, joined_at, last_seen FROM dao_members');
-    client.release();
-
-    const members = result.rows.map((row: any) => ({
-      address: row.address,
-      joinedAt: Number(row.joined_at),
-      lastSeen: Number(row.last_seen),
-    }));
-
-    return NextResponse.json({ count: members.length, members });
+    await ensureTable();
+    const result = await pool.query('SELECT COUNT(*) FROM dao_members');
+    const count = Number(result.rows[0]?.count || 0);
+    return NextResponse.json({ count, members: [] });
   } catch (error) {
     console.error('Neon members GET error:', error);
     return NextResponse.json({ count: 0, members: [] });
@@ -24,25 +30,25 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+    await ensureTable();
     const { address } = await request.json();
     if (!address) {
       return NextResponse.json({ error: 'Address required' }, { status: 400 });
     }
 
-    const client = await pool.connect();
-    await client.query(`
+    const existing = await pool.query('SELECT address FROM dao_members WHERE address = $1', [address]);
+    const isNew = existing.rows.length === 0;
+
+    await pool.query(`
       INSERT INTO dao_members (address, joined_at, last_seen)
       VALUES ($1, $2, $3)
-      ON CONFLICT (address) DO UPDATE
-      SET last_seen = EXCLUDED.last_seen
+      ON CONFLICT (address) DO UPDATE SET last_seen = $3
     `, [address, Date.now(), Date.now()]);
 
-    const countResult = await client.query('SELECT COUNT(*) FROM dao_members');
-    client.release();
-
+    const countResult = await pool.query('SELECT COUNT(*) FROM dao_members');
     const count = Number(countResult.rows[0]?.count || 0);
 
-    return NextResponse.json({ success: true, isNew: true, count });
+    return NextResponse.json({ success: true, isNew, count });
   } catch (error) {
     console.error('Neon members POST error:', error);
     return NextResponse.json({ error: 'Failed' }, { status: 500 });

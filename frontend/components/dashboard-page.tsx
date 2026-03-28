@@ -152,6 +152,16 @@ export function DashboardPage() {
       if (count) setBlockchainStats(prev => ({ ...prev, totalMembers: count }));
     };
     window.addEventListener('member-count-updated', handler);
+
+    // Also fetch live count on mount
+    fetch('/api/members')
+      .then(r => r.json())
+      .then(data => {
+        if (data.count > 0)
+          setBlockchainStats(prev => ({ ...prev, totalMembers: data.count }));
+      })
+      .catch(() => {});
+
     return () => window.removeEventListener('member-count-updated', handler);
   }, [])
 

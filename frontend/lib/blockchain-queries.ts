@@ -681,17 +681,17 @@ export class ClimateDAOQueryService {
         this.getTotalMembers(),
         this.getProposals()
       ]);
-      
+
       const activeProposals = allProposals.filter(p => p.status === 'active').length;
-      
+
       let userProposalCount = 0;
       let userVoteCount = 0;
-      
+
       if (userAddress) {
         userProposalCount = allProposals.filter(p => p.creator === userAddress).length;
         userVoteCount = await this.getUserVoteCount(userAddress);
       }
-      
+
       return {
         totalProposals: allProposals.length,
         totalMembers,
@@ -701,9 +701,10 @@ export class ClimateDAOQueryService {
       };
     } catch (error) {
       console.error('Error getting blockchain stats:', error);
+      // Return cached member count instead of 0 to avoid wiping the displayed count
       return {
         totalProposals: 0,
-        totalMembers: 0,
+        totalMembers: memberTracker.getCachedCount(),
         activeProposals: 0,
         userProposalCount: 0,
         userVoteCount: 0
