@@ -134,8 +134,8 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
       const fd = new FormData()
       fd.append('file', file)
       const res = await fetch('/api/upload', { method: 'POST', body: fd })
-      if (!res.ok) throw new Error('Upload failed')
       const data = await res.json()
+      if (!res.ok || data.error) throw new Error(data.error || 'Upload failed')
       setUsageFiles(prev => ({
         ...prev,
         [milestoneIdx]: [...(prev[milestoneIdx] || []), { url: data.url, name: data.name, type: data.type }]
@@ -614,13 +614,21 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
                         <p className="text-orange-400 text-xs font-medium mb-1">🧾 Fund usage report:</p>
                         {m.usageProof && <p className="text-white/70 text-xs whitespace-pre-wrap">{m.usageProof.replace(/\[.*?\]\(.*?\)/g, '').trim()}</p>}
                         {(m.usageFiles || []).length > 0 && (
-                          <div className="space-y-1 pt-1">
+                          <div className="space-y-2 pt-1">
                             {(m.usageFiles || []).map((f: any, fi: number) => (
-                              <a key={fi} href={f.url} target="_blank" rel="noreferrer"
-                                className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-lg px-2 py-1 hover:bg-white/10 transition-colors">
-                                <span className="text-xs">{f.type?.startsWith('image') ? '🖼️' : f.type?.startsWith('video') ? '🎥' : '📄'}</span>
-                                <span className="text-blue-400 text-xs truncate hover:underline">{f.name}</span>
-                              </a>
+                              <div key={fi} className="rounded-lg overflow-hidden border border-white/10">
+                                {f.type?.startsWith('image') ? (
+                                  <img src={f.url} alt={f.name} className="w-full max-h-48 object-cover cursor-pointer" onClick={() => window.open(f.url, '_blank')} />
+                                ) : f.type?.startsWith('video') ? (
+                                  <video src={f.url} controls className="w-full max-h-48" />
+                                ) : (
+                                  <a href={f.url} target="_blank" rel="noreferrer"
+                                    className="flex items-center gap-2 bg-white/5 px-3 py-2 hover:bg-white/10 transition-colors">
+                                    <span className="text-lg">📄</span>
+                                    <span className="text-blue-400 text-xs truncate hover:underline">{f.name}</span>
+                                  </a>
+                                )}
+                              </div>
                             ))}
                           </div>
                         )}
