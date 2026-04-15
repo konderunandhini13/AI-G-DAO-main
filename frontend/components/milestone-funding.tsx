@@ -31,6 +31,8 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
   const [myVotes, setMyVotes] = useState<Record<number, "for" | "against">>({})
   const [proofInputs, setProofInputs] = useState<Record<number, string>>({})
   const [usageInputs, setUsageInputs] = useState<Record<number, string>>({})
+  const [usageFiles, setUsageFiles] = useState<Record<number, { url: string; name: string; type: string }[]>>({})
+  const [uploadingIdx, setUploadingIdx] = useState<number | null>(null)
   const [submittingProof, setSubmittingProof] = useState<number | null>(null)
   const [submittingUsage, setSubmittingUsage] = useState<number | null>(null)
 
@@ -126,9 +128,29 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
 
   useEffect(() => { setMyVotes({}); fetchMyVotes() }, [address, fetchMyVotes])
 
+  const handleUploadFile = async (milestoneIdx: number, file: File) => {
+    setUploadingIdx(milestoneIdx)
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      const res = await fetch('/api/upload', { method: 'POST', body: fd })
+      if (!res.ok) throw new Error('Upload failed')
+      const data = await res.json()
+      setUsageFiles(prev => ({
+        ...prev,
+        [milestoneIdx]: [...(prev[milestoneIdx] || []), { url: data.url, name: data.name, type: data.type }]
+      }))
+    } catch (err: any) {
+      alert(`Upload failed: ${err.message}`)
+    } finally {
+      setUploadingIdx(null)
+    }
+  }
+
   const handleSubmitUsageProof = async (milestoneIdx: number) => {
     const usage = usageInputs[milestoneIdx]?.trim()
-    if (!usage) return alert("Please describe how the funds were used.")
+    const files = usageFiles[milestoneIdx] || []
+    if (!usage && files.length === 0) return alert("Please add a description or upload at least one file.")
     setSubmittingUsage(milestoneIdx)
     try {
       await fetch("/api/milestone-votes", {
@@ -138,8 +160,10 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
       })
       const pRes = await fetch(`/api/proposals/${proposalId}`)
       const fresh = await pRes.json()
+      const fileLinks = files.map(f => `[${f.name}](${f.url})`).join(' ')
+      const fullProof = [usage, fileLinks].filter(Boolean).join('\n')
       const updated = (fresh.milestones || []).map((m: any, i: number) =>
-        i !== milestoneIdx ? m : { ...m, status: "pending_usage_proof", usageProof: usage, voteYes: 0, voteNo: 0 }
+        i !== milestoneIdx ? m : { ...m, status: "pending_usage_proof", usageProof: fullProof, usageFiles: files, voteYes: 0, voteNo: 0 }
       )
       await fetch("/api/proposals", {
         method: "PATCH",
@@ -149,6 +173,7 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
       setMilestones(updated)
       setMyVotes(prev => { const n = { ...prev }; delete n[milestoneIdx]; return n })
       setUsageInputs(prev => ({ ...prev, [milestoneIdx]: "" }))
+      setUsageFiles(prev => ({ ...prev, [milestoneIdx]: [] }))
     } catch (err: any) {
       alert(`Failed: ${err.message}`)
     } finally {
@@ -534,15 +559,45 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
                   {/* STEP 4: Released — proposer submits fund usage report */}
                   {isReleased && isProposer && (
                     <div className="pl-8 space-y-2 pt-1">
-                      <p className="text-purple-300 text-xs font-medium">💸 {amountAlgo} ALGO released. Now submit how the funds were used:</p>
+                      <p className="text-purple-300 text-xs font-medium">💸 {amountAlgo} ALGO released. Submit proof of how funds were used:</p>
                       <textarea
-                        placeholder="Describe how funds were spent (receipts, invoices, transaction links, photos...)"
+                        placeholder="Describe how funds were spent (optional if uploading files)..."
                         value={usageInputs[i] || ""}
                         onChange={e => setUsageInputs(prev => ({ ...prev, [i]: e.target.value }))}
                         rows={2}
                         className="w-full bg-white/5 border border-white/15 text-white placeholder-white/30 rounded-lg px-3 py-2 text-xs resize-none focus:outline-none focus:border-white/30"
                       />
-                      <Button size="sm" onClick={() => handleSubmitUsageProof(i)} disabled={submittingUsage === i}
+                      {/* File upload */}
+                      <label className="flex items-center gap-2 cursor-pointer w-fit">
+                        <div className="bg-white/10 hover:bg-white/15 border border-white/20 text-white/70 text-xs px-3 py-1.5 rounded-lg transition-colors">
+                          {uploadingIdx === i ? "⏳ Uploading..." : "📎 Attach files (photos, videos, PDFs)"}
+                        </div>
+                        <input
+                          type="file"
+                          accept="image/*,video/*,.pdf,.doc,.docx"
+                          multiple
+                          className="hidden"
+                          disabled={uploadingIdx === i}
+                          onChange={async e => {
+                            const files = Array.from(e.target.files || [])
+                            for (const file of files) await handleUploadFile(i, file)
+                            e.target.value = ''
+                          }}
+                        />
+                      </label>
+                      {/* Uploaded files preview */}
+                      {(usageFiles[i] || []).length > 0 && (
+                        <div className="space-y-1">
+                          {(usageFiles[i] || []).map((f, fi) => (
+                            <div key={fi} className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-lg px-2 py-1">
+                              <span className="text-xs">{f.type.startsWith('image') ? '🖼️' : f.type.startsWith('video') ? '🎥' : '📄'}</span>
+                              <a href={f.url} target="_blank" rel="noreferrer" className="text-blue-400 text-xs truncate hover:underline flex-1">{f.name}</a>
+                              <button onClick={() => setUsageFiles(prev => ({ ...prev, [i]: prev[i].filter((_, j) => j !== fi) }))} className="text-white/30 hover:text-red-400 text-xs">✕</button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      <Button size="sm" onClick={() => handleSubmitUsageProof(i)} disabled={submittingUsage === i || uploadingIdx === i}
                         className="bg-purple-600 hover:bg-purple-700 text-white rounded-xl h-8 text-xs px-4">
                         {submittingUsage === i ? "Submitting..." : "🧾 Submit Fund Usage Report"}
                       </Button>
@@ -555,9 +610,20 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
                   {/* STEP 5: Usage proof submitted — community votes */}
                   {isPendingUsage && (
                     <div className="pl-8 space-y-2 pt-1">
-                      <div className="bg-orange-500/10 border border-orange-500/20 rounded-xl p-3">
+                      <div className="bg-orange-500/10 border border-orange-500/20 rounded-xl p-3 space-y-2">
                         <p className="text-orange-400 text-xs font-medium mb-1">🧾 Fund usage report:</p>
-                        <p className="text-white/70 text-xs">{m.usageProof}</p>
+                        {m.usageProof && <p className="text-white/70 text-xs whitespace-pre-wrap">{m.usageProof.replace(/\[.*?\]\(.*?\)/g, '').trim()}</p>}
+                        {(m.usageFiles || []).length > 0 && (
+                          <div className="space-y-1 pt-1">
+                            {(m.usageFiles || []).map((f: any, fi: number) => (
+                              <a key={fi} href={f.url} target="_blank" rel="noreferrer"
+                                className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-lg px-2 py-1 hover:bg-white/10 transition-colors">
+                                <span className="text-xs">{f.type?.startsWith('image') ? '🖼️' : f.type?.startsWith('video') ? '🎥' : '📄'}</span>
+                                <span className="text-blue-400 text-xs truncate hover:underline">{f.name}</span>
+                              </a>
+                            ))}
+                          </div>
+                        )}
                       </div>
                       <div className="space-y-1">
                         <div className="flex justify-between text-xs text-white/40">
