@@ -58,9 +58,9 @@ export default function ProposalDetailPage() {
   }, [address, proposalId])
   const [showMilestoneForm, setShowMilestoneForm] = useState(false)
   const [draftMilestones, setDraftMilestones] = useState([
-    { title: '', description: '', percent: 33, status: 'pending', voteYes: 0, voteNo: 0 },
-    { title: '', description: '', percent: 34, status: 'pending', voteYes: 0, voteNo: 0 },
-    { title: '', description: '', percent: 33, status: 'pending', voteYes: 0, voteNo: 0 },
+    { title: '', description: '', percent: 0, status: 'pending', voteYes: 0, voteNo: 0 },
+    { title: '', description: '', percent: 0, status: 'pending', voteYes: 0, voteNo: 0 },
+    { title: '', description: '', percent: 0, status: 'pending', voteYes: 0, voteNo: 0 },
   ])
   const [savingMilestones, setSavingMilestones] = useState(false)
 
@@ -414,15 +414,7 @@ export default function ProposalDetailPage() {
                     {showMilestoneForm && (
                       <Card className="bg-white/5 border border-yellow-500/20 rounded-2xl">
                         <CardContent className="p-4 space-y-4">
-                          <p className="text-white/70 text-xs">Split your ${proposal.fundingAmount.toLocaleString()} into 3 stages. Describe what will be done in each stage.</p>
-                          <div className="flex gap-1 flex-wrap">
-                            {[[33,34,33],[30,40,30],[25,50,25],[50,30,20]].map(vals => (
-                              <button key={vals.join()} type="button"
-                                onClick={() => setDraftMilestones(prev => prev.map((m,i) => ({ ...m, percent: vals[i] })))}
-                                className="text-xs px-2 py-1 rounded-lg bg-white/5 border border-white/15 text-white/60 hover:bg-white/10 hover:text-white transition-colors"
-                              >{vals.join('% / ')}%</button>
-                            ))}
-                          </div>
+                          <p className="text-white/70 text-xs">Split your ${proposal.fundingAmount.toLocaleString()} into 3 stages. Enter the % for each stage — must total 100%.</p>
                           {draftMilestones.map((m, i) => {
                             const amt = Math.round((proposal.fundingAmount * m.percent) / 100)
                             return (
@@ -431,9 +423,11 @@ export default function ProposalDetailPage() {
                                   <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
                                     i === 0 ? 'bg-blue-500/30 text-blue-300' : i === 1 ? 'bg-purple-500/30 text-purple-300' : 'bg-green-500/30 text-green-300'
                                   }`}>{i+1}</span>
-                                  <span className="text-white/60 text-xs">Stage {i+1} — {m.percent}% (${amt.toLocaleString()})</span>
-                                  <input type="number" min={1} max={98} value={m.percent}
-                                    onChange={e => setDraftMilestones(prev => prev.map((x,j) => j===i ? {...x, percent: Number(e.target.value)} : x))}
+                                  <span className="text-white/60 text-xs">Stage {i+1}{m.percent > 0 ? ` — ${m.percent}% ($${Math.round((proposal.fundingAmount * m.percent) / 100).toLocaleString()})` : ''}</span>
+                                  <input type="number" min={1} max={98}
+                                    value={m.percent === 0 ? '' : m.percent}
+                                    placeholder="0"
+                                    onChange={e => setDraftMilestones(prev => prev.map((x,j) => j===i ? {...x, percent: Number(e.target.value) || 0} : x))}
                                     className="ml-auto w-14 bg-white/10 border border-white/20 text-white text-xs rounded-lg px-2 py-1 text-center"
                                   />
                                   <span className="text-white/40 text-xs">%</span>
@@ -452,6 +446,25 @@ export default function ProposalDetailPage() {
                               </div>
                             )
                           })}
+                          {/* Live total indicator */}
+                          {draftMilestones.reduce((s, m) => s + (m.percent || 0), 0) === 100 && (
+                            <div className="flex items-center justify-between text-xs px-2 py-2 rounded-lg bg-green-500/10 border border-green-500/20 text-green-400">
+                              <span>Total allocation</span>
+                              <span className="font-bold">100% ✓ Ready to submit</span>
+                            </div>
+                          )}
+                          {draftMilestones.reduce((s, m) => s + (m.percent || 0), 0) > 100 && (
+                            <div className="flex items-center justify-between text-xs px-2 py-2 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400">
+                              <span>Total allocation</span>
+                              <span className="font-bold">{draftMilestones.reduce((s, m) => s + (m.percent || 0), 0)}% — exceeds 100%</span>
+                            </div>
+                          )}
+                          {draftMilestones.reduce((s, m) => s + (m.percent || 0), 0) < 100 && (
+                            <div className="flex items-center justify-between text-xs px-2 py-2 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-yellow-400">
+                              <span>Total allocation</span>
+                              <span className="font-bold">{draftMilestones.reduce((s, m) => s + (m.percent || 0), 0)}% — {100 - draftMilestones.reduce((s, m) => s + (m.percent || 0), 0)}% remaining</span>
+                            </div>
+                          )}
                           <div className="flex gap-2 pt-1">
                             <Button variant="ghost" onClick={() => setShowMilestoneForm(false)} className="flex-1 text-white/50 hover:text-white border border-white/10 rounded-xl text-sm">Cancel</Button>
                             <Button onClick={handleSaveMilestones} disabled={savingMilestones} className="flex-1 bg-green-600 hover:bg-green-700 text-white rounded-xl text-sm">

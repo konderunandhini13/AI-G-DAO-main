@@ -47,6 +47,9 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ error: err.message }, { status: 500 })
   }
 }
+
+// POST /api/milestone-votes — record a vote
+export async function POST(req: NextRequest) {
   try {
     await ensureTable()
     const { proposalId, milestoneIdx, voterAddress, vote } = await req.json()

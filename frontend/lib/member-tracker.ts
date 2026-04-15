@@ -45,6 +45,32 @@ class MemberTrackerService {
     }
   }
 
+  async removeMember(address: string): Promise<void> {
+    try {
+      // Remove from local cache
+      const members = this.getRegisteredMembers().filter(a => a !== address);
+      localStorage.setItem(LS_MEMBERS_KEY, JSON.stringify(members));
+      const newCount = Math.max(0, this.getCachedCount() - 1);
+      this.setCachedCount(newCount);
+
+      // Remove from DB
+      const response = await fetch('/api/members', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ address }),
+      });
+      const data = await response.json();
+      const count = data.count ?? newCount;
+      this.setCachedCount(count);
+
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('member-count-updated', { detail: { count } }));
+      }
+    } catch (error) {
+      console.error('Error removing member:', error);
+    }
+  }
+
   async registerMember(address: string): Promise<boolean> {
     try {
       // Check locally first — if already registered, just return current count

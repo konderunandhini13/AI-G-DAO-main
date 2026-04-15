@@ -124,18 +124,22 @@ function useWallet(): WalletState {
 
   const disconnect = useCallback(() => {
     try {
+      const currentAddress = address
       peraWallet.disconnect()
       setIsConnected(false)
       setAddress(null)
       setBalance(0)
       setError(null)
-      
-      // Clear localStorage
       localStorage.removeItem('wallet_address')
+
+      // Remove member from DB and update count
+      if (currentAddress) {
+        memberTracker.removeMember(currentAddress).catch(() => {})
+      }
     } catch (err) {
       console.error('Disconnect failed:', err)
     }
-  }, [])
+  }, [address])
 
   const clearError = useCallback(() => {
     setError(null)
