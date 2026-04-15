@@ -27,7 +27,8 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
   const [releasedMilestones, setReleasedMilestones] = useState<number[]>([])
   const [votingIdx, setVotingIdx] = useState<number | null>(null)
   const [releasingIdx, setReleasingIdx] = useState<number | null>(null)
-  const [releaseModal, setReleaseModal] = useState<{ idx: number; amount: number; txId: string; allDone: boolean } | null>(null)
+  const [releaseModal, setReleaseModal] = useState<{ idx: number; amount: number; txId: string } | null>(null)
+  const [climateCreditsModal, setClimateCreditsModal] = useState(false)
   const [myVotes, setMyVotes] = useState<Record<number, "for" | "against">>({})
   const [proofInputs, setProofInputs] = useState<Record<number, string>>({})
   const [proofFiles, setProofFiles] = useState<Record<number, { url: string; name: string; type: string }[]>>({})
@@ -115,6 +116,11 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ id: proposalId, milestones: withUnlocks }),
             })
+          }
+          // Show climate credits if last milestone just became usage_approved
+          const lastIdx = withUnlocks.length - 1
+          if (withUnlocks[lastIdx]?.status === "usage_approved" && p.milestones[lastIdx]?.status !== "usage_approved") {
+            setTimeout(() => setClimateCreditsModal(true), 800)
           }
         }
       }
@@ -268,7 +274,6 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
 
       const updated = freshMilestones.map((m: any, i: number) => {
         if (i === milestoneIdx) return { ...m, voteYes: dbYes, voteNo: dbNo, status: newStatus }
-        // Unlock next milestone when usage is approved
         if (newStatus === "usage_approved" && i === milestoneIdx + 1 && m.status === "locked") return { ...m, status: "active" }
         return m
       })
@@ -279,6 +284,11 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
       })
       setMilestones(updated)
       setMyVotes(prev => ({ ...prev, [milestoneIdx]: vote }))
+      // Show climate credits popup when last milestone usage is approved
+      const isLastMilestone = milestoneIdx === freshMilestones.length - 1
+      if (newStatus === "usage_approved" && isLastMilestone) {
+        setTimeout(() => setClimateCreditsModal(true), 800)
+      }
     } catch (err: any) {
       alert(`Vote failed: ${err.message}`)
     } finally {
@@ -355,7 +365,6 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
         idx: milestoneIdx,
         amount: amountAlgo,
         txId: typeof txId === 'string' ? txId : String(txId),
-        allDone: nextReleased.length >= milestones.length,
       })
     } catch (err: any) {
       alert(`Release failed: ${err.message}`)
@@ -387,7 +396,8 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
 
   if (!milestones.length) return null
 
-  const releasedCount = milestones.filter(m => m.status === "released").length
+  const doneCount = milestones.filter(m => m.status === "usage_approved").length
+  const allDone = doneCount === milestones.length
 
   return (
     <>
@@ -398,12 +408,12 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
               <CoinsIcon className="w-4 h-4 text-purple-400" />
               Funding Milestones
             </CardTitle>
-            <span className="text-white/40 text-xs">{releasedCount}/{milestones.length} released</span>
+            <span className="text-white/40 text-xs">{doneCount}/{milestones.length} completed</span>
           </div>
           <div className="h-1.5 bg-white/10 rounded-full overflow-hidden mt-2">
             <div
               className="h-full bg-gradient-to-r from-purple-500 to-pink-500 rounded-full transition-all duration-700"
-              style={{ width: `${milestones.length > 0 ? (releasedCount / milestones.length) * 100 : 0}%` }}
+              style={{ width: `${milestones.length > 0 ? (doneCount / milestones.length) * 100 : 0}%` }}
             />
           </div>
         </CardHeader>
@@ -701,7 +711,11 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
                   )}
 
                   {usageApproved && (
-                    <p className="text-xs text-teal-400/70 pl-8">✅ Fund usage verified. {i + 1 < milestones.length ? `Milestone ${i + 2} is now unlocked.` : "All milestones complete!"}</p>
+                    <p className="text-xs text-teal-400/70 pl-8">
+                      {i + 1 < milestones.length
+                        ? `✅ Fund usage verified. Milestone ${i + 2} is now unlocked.`
+                        : "✅ Fund usage verified. All milestones complete — project done!"}
+                    </p>
                   )}
                 </div>
 
@@ -723,31 +737,44 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
         </CardContent>
       </Card>
 
-      {/* Release success modal */}
+      {/* Fund release modal */}
       {releaseModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setReleaseModal(null)} />
           <div className="relative bg-gradient-to-br from-slate-800 to-slate-900 border border-white/10 rounded-3xl p-6 max-w-sm w-full shadow-2xl text-center space-y-4">
             <div className="w-16 h-16 mx-auto rounded-full flex items-center justify-center bg-gradient-to-br from-purple-500 to-pink-500 shadow-lg">
-              <span className="text-3xl">{releaseModal.allDone ? "🎉" : "💸"}</span>
+              <span className="text-3xl">💸</span>
             </div>
-            {releaseModal.allDone ? (
-              <>
-                <h2 className="text-white font-bold text-xl">All Funds Released!</h2>
-                <p className="text-white/60 text-sm">All {milestones.length} milestones completed. 🎉</p>
-              </>
-            ) : (
-              <>
-                <h2 className="text-white font-bold text-xl">Milestone {releaseModal.idx + 1} Funded!</h2>
-                <p className="text-white/60 text-sm">
-                  <span className="text-purple-300 font-semibold">{releaseModal.amount} ALGO</span> sent to proposer.
-                  <span className="block mt-1 text-orange-300">Now submit your fund usage report to unlock the next milestone.</span>
-                </p>
-              </>
-            )}
+            <h2 className="text-white font-bold text-xl">Milestone {releaseModal.idx + 1} Funded!</h2>
+            <p className="text-white/60 text-sm">
+              <span className="text-purple-300 font-semibold">{releaseModal.amount} ALGO</span> sent to proposer.
+              <span className="block mt-1 text-orange-300">Now submit your fund usage report to unlock the next milestone.</span>
+            </p>
             <p className="text-white/20 text-xs font-mono truncate">TX: {releaseModal.txId.slice(0, 24)}...</p>
-            <Button onClick={() => setReleaseModal(null)} className="w-full bg-purple-600 hover:bg-purple-700 text-white rounded-xl">
-              {releaseModal.allDone ? "🎉 Done" : "Continue →"}
+            <Button onClick={() => setReleaseModal(null)} className="w-full bg-purple-600 hover:bg-purple-700 text-white rounded-xl">Continue →</Button>
+          </div>
+        </div>
+      )}
+
+      {/* Climate Credits popup — shown only after last milestone usage is approved */}
+      {climateCreditsModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setClimateCreditsModal(false)} />
+          <div className="relative bg-gradient-to-br from-emerald-900 to-slate-900 border border-emerald-500/30 rounded-3xl p-8 max-w-sm w-full shadow-2xl text-center space-y-5">
+            <div className="w-20 h-20 mx-auto rounded-full flex items-center justify-center bg-gradient-to-br from-emerald-400 to-teal-500 shadow-lg shadow-emerald-500/30">
+              <span className="text-4xl">🌿</span>
+            </div>
+            <div className="space-y-1">
+              <h2 className="text-white font-bold text-2xl">Project Complete!</h2>
+              <p className="text-emerald-400 font-semibold text-sm">All 3 milestones verified ✅</p>
+            </div>
+            <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-4 space-y-2">
+              <p className="text-emerald-300 font-bold text-lg">🌟 Climate Credits Earned</p>
+              <p className="text-white/70 text-sm">This project has successfully completed all milestones and fund usage has been verified by the community.</p>
+              <p className="text-emerald-400 text-xs mt-2">Climate credits have been accrued for this project and will be added to the DAO treasury to fund future climate initiatives.</p>
+            </div>
+            <Button onClick={() => setClimateCreditsModal(false)} className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl font-semibold">
+              🎉 Awesome!
             </Button>
           </div>
         </div>
