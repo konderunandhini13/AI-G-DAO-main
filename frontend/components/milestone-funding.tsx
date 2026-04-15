@@ -30,8 +30,10 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
   const [releaseModal, setReleaseModal] = useState<{ idx: number; amount: number; txId: string; allDone: boolean } | null>(null)
   const [myVotes, setMyVotes] = useState<Record<number, "for" | "against">>({})
   const [proofInputs, setProofInputs] = useState<Record<number, string>>({})
+  const [proofFiles, setProofFiles] = useState<Record<number, { url: string; name: string; type: string }[]>>({})
   const [usageInputs, setUsageInputs] = useState<Record<number, string>>({})
   const [usageFiles, setUsageFiles] = useState<Record<number, { url: string; name: string; type: string }[]>>({})
+  const [uploadingProofIdx, setUploadingProofIdx] = useState<number | null>(null)
   const [uploadingIdx, setUploadingIdx] = useState<number | null>(null)
   const [submittingProof, setSubmittingProof] = useState<number | null>(null)
   const [submittingUsage, setSubmittingUsage] = useState<number | null>(null)
@@ -128,23 +130,31 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
 
   useEffect(() => { setMyVotes({}); fetchMyVotes() }, [address, fetchMyVotes])
 
+  const uploadFile = async (file: File): Promise<{ url: string; name: string; type: string }> => {
+    const fd = new FormData()
+    fd.append('file', file)
+    const res = await fetch('/api/upload', { method: 'POST', body: fd })
+    const data = await res.json()
+    if (!res.ok || data.error) throw new Error(data.error || 'Upload failed')
+    return { url: data.url, name: data.name, type: data.type }
+  }
+
   const handleUploadFile = async (milestoneIdx: number, file: File) => {
     setUploadingIdx(milestoneIdx)
     try {
-      const fd = new FormData()
-      fd.append('file', file)
-      const res = await fetch('/api/upload', { method: 'POST', body: fd })
-      const data = await res.json()
-      if (!res.ok || data.error) throw new Error(data.error || 'Upload failed')
-      setUsageFiles(prev => ({
-        ...prev,
-        [milestoneIdx]: [...(prev[milestoneIdx] || []), { url: data.url, name: data.name, type: data.type }]
-      }))
-    } catch (err: any) {
-      alert(`Upload failed: ${err.message}`)
-    } finally {
-      setUploadingIdx(null)
-    }
+      const f = await uploadFile(file)
+      setUsageFiles(prev => ({ ...prev, [milestoneIdx]: [...(prev[milestoneIdx] || []), f] }))
+    } catch (err: any) { alert(`Upload failed: ${err.message}`) }
+    finally { setUploadingIdx(null) }
+  }
+
+  const handleUploadProofFile = async (milestoneIdx: number, file: File) => {
+    setUploadingProofIdx(milestoneIdx)
+    try {
+      const f = await uploadFile(file)
+      setProofFiles(prev => ({ ...prev, [milestoneIdx]: [...(prev[milestoneIdx] || []), f] }))
+    } catch (err: any) { alert(`Upload failed: ${err.message}`) }
+    finally { setUploadingProofIdx(null) }
   }
 
   const handleSubmitUsageProof = async (milestoneIdx: number) => {
@@ -183,32 +193,29 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
 
   const handleSubmitProof = async (milestoneIdx: number) => {
     const proof = proofInputs[milestoneIdx]?.trim()
-    if (!proof) return alert("Please describe your proof of completion.")
+    const files = proofFiles[milestoneIdx] || []
+    if (!proof && files.length === 0) return alert("Please describe your proof or upload at least one file.")
     setSubmittingProof(milestoneIdx)
     try {
-      // 1. Delete old votes for this milestone so community can vote fresh
       await fetch("/api/milestone-votes", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ proposalId, milestoneIdx }),
       })
-
-      // 2. Update milestone status to pending_proof with new proof
       const pRes = await fetch(`/api/proposals/${proposalId}`)
       const fresh = await pRes.json()
       const updated = (fresh.milestones || []).map((m: any, i: number) =>
-        i !== milestoneIdx ? m : { ...m, status: "pending_proof", proof, voteYes: 0, voteNo: 0 }
+        i !== milestoneIdx ? m : { ...m, status: "pending_proof", proof, proofFiles: files, voteYes: 0, voteNo: 0 }
       )
       await fetch("/api/proposals", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: proposalId, milestones: updated }),
       })
-
-      // 3. Update local state immediately
       setMilestones(updated)
       setMyVotes(prev => { const n = { ...prev }; delete n[milestoneIdx]; return n })
       setProofInputs(prev => ({ ...prev, [milestoneIdx]: "" }))
+      setProofFiles(prev => ({ ...prev, [milestoneIdx]: [] }))
     } catch (err: any) {
       alert(`Failed: ${err.message}`)
     } finally {
@@ -357,6 +364,27 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
     }
   }
 
+  // Shared file viewer — images inline, video player, PDF/doc as clickable link
+  const FileViewer = ({ files }: { files: any[] }) => (
+    <div className="space-y-2 pt-1">
+      {files.map((f: any, fi: number) => (
+        <div key={fi} className="rounded-xl overflow-hidden border border-white/10">
+          {f.type?.startsWith('image') ? (
+            <img src={f.url} alt={f.name} className="w-full max-h-56 object-cover cursor-pointer hover:opacity-90 transition-opacity" onClick={() => window.open(f.url, '_blank')} />
+          ) : f.type?.startsWith('video') ? (
+            <video src={f.url} controls className="w-full max-h-56 bg-black" />
+          ) : (
+            <a href={f.url} target="_blank" rel="noreferrer" className="flex items-center gap-3 bg-white/5 px-3 py-2.5 hover:bg-white/10 transition-colors">
+              <span className="text-xl">📄</span>
+              <span className="text-blue-400 text-xs hover:underline truncate">{f.name}</span>
+              <span className="text-white/30 text-xs ml-auto">click to open ↗</span>
+            </a>
+          )}
+        </div>
+      ))}
+    </div>
+  )
+
   if (!milestones.length) return null
 
   const releasedCount = milestones.filter(m => m.status === "released").length
@@ -450,13 +478,36 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
                     <div className="pl-8 space-y-2 pt-1">
                       <p className="text-blue-300 text-xs font-medium">📝 Complete this milestone then submit your proof:</p>
                       <textarea
-                        placeholder="Describe what you completed (links, photos, invoices, reports...)"
+                        placeholder="Describe what you completed (optional if uploading files)..."
                         value={proofInputs[i] || ""}
                         onChange={e => setProofInputs(prev => ({ ...prev, [i]: e.target.value }))}
                         rows={2}
                         className="w-full bg-white/5 border border-white/15 text-white placeholder-white/30 rounded-lg px-3 py-2 text-xs resize-none focus:outline-none focus:border-white/30"
                       />
-                      <Button size="sm" onClick={() => handleSubmitProof(i)} disabled={submittingProof === i}
+                      <label className="flex items-center gap-2 cursor-pointer w-fit">
+                        <div className="bg-white/10 hover:bg-white/15 border border-white/20 text-white/70 text-xs px-3 py-1.5 rounded-lg transition-colors">
+                          {uploadingProofIdx === i ? "⏳ Uploading..." : "📎 Attach files (photos, videos, PDFs)"}
+                        </div>
+                        <input type="file" accept="image/*,video/*,.pdf,.doc,.docx" multiple className="hidden"
+                          disabled={uploadingProofIdx === i}
+                          onChange={async e => {
+                            for (const file of Array.from(e.target.files || [])) await handleUploadProofFile(i, file)
+                            e.target.value = ''
+                          }}
+                        />
+                      </label>
+                      {(proofFiles[i] || []).length > 0 && (
+                        <div className="space-y-1">
+                          {(proofFiles[i] || []).map((f, fi) => (
+                            <div key={fi} className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-lg px-2 py-1">
+                              <span className="text-xs">{f.type.startsWith('image') ? '🖼️' : f.type.startsWith('video') ? '🎥' : '📄'}</span>
+                              <span className="text-white/60 text-xs truncate flex-1">{f.name}</span>
+                              <button onClick={() => setProofFiles(prev => ({ ...prev, [i]: prev[i].filter((_, j) => j !== fi) }))} className="text-white/30 hover:text-red-400 text-xs">✕</button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      <Button size="sm" onClick={() => handleSubmitProof(i)} disabled={submittingProof === i || uploadingProofIdx === i}
                         className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl h-8 text-xs px-4">
                         {submittingProof === i ? "Submitting..." : "📤 Submit Proof"}
                       </Button>
@@ -466,12 +517,13 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
                     <p className="text-white/30 text-xs pl-8">⏳ Waiting for proposer to submit proof...</p>
                   )}
 
-                  {/* STEP 2: Proof submitted — community votes */}
+                  {/* STEP 2: Proof submitted — community sees proof + votes */}
                   {isPendingProof && (
                     <div className="pl-8 space-y-2 pt-1">
-                      <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-3">
-                        <p className="text-yellow-400 text-xs font-medium mb-1">📋 Proof submitted:</p>
-                        <p className="text-white/70 text-xs">{m.proof}</p>
+                      <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-3 space-y-2">
+                        <p className="text-yellow-400 text-xs font-medium">📋 Completion proof submitted:</p>
+                        {m.proof && <p className="text-white/70 text-xs whitespace-pre-wrap">{m.proof}</p>}
+                        {(m.proofFiles || []).length > 0 && <FileViewer files={m.proofFiles} />}
                       </div>
                       <div className="space-y-1">
                         <div className="flex justify-between text-xs text-white/40">
@@ -613,25 +665,7 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
                       <div className="bg-orange-500/10 border border-orange-500/20 rounded-xl p-3 space-y-2">
                         <p className="text-orange-400 text-xs font-medium mb-1">🧾 Fund usage report:</p>
                         {m.usageProof && <p className="text-white/70 text-xs whitespace-pre-wrap">{m.usageProof.replace(/\[.*?\]\(.*?\)/g, '').trim()}</p>}
-                        {(m.usageFiles || []).length > 0 && (
-                          <div className="space-y-2 pt-1">
-                            {(m.usageFiles || []).map((f: any, fi: number) => (
-                              <div key={fi} className="rounded-lg overflow-hidden border border-white/10">
-                                {f.type?.startsWith('image') ? (
-                                  <img src={f.url} alt={f.name} className="w-full max-h-48 object-cover cursor-pointer" onClick={() => window.open(f.url, '_blank')} />
-                                ) : f.type?.startsWith('video') ? (
-                                  <video src={f.url} controls className="w-full max-h-48" />
-                                ) : (
-                                  <a href={f.url} target="_blank" rel="noreferrer"
-                                    className="flex items-center gap-2 bg-white/5 px-3 py-2 hover:bg-white/10 transition-colors">
-                                    <span className="text-lg">📄</span>
-                                    <span className="text-blue-400 text-xs truncate hover:underline">{f.name}</span>
-                                  </a>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        )}
+                        {(m.usageFiles || []).length > 0 && <FileViewer files={m.usageFiles} />}
                       </div>
                       <div className="space-y-1">
                         <div className="flex justify-between text-xs text-white/40">
