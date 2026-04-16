@@ -720,6 +720,9 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
                             style={{ width: `${eligibleCount > 0 ? (voteYes / eligibleCount) * 100 : 0}%` }} />
                         </div>
                       </div>
+                      {isProposer && (
+                        <p className="text-orange-400/70 text-xs">⏳ Waiting for members to verify fund usage ({voteYes}/{eligibleCount})</p>
+                      )}
                       {!isProposer && !myVote && !!address && (
                         <div className="flex gap-2">
                           <Button size="sm" onClick={() => handleVote(i, "for")} disabled={votingIdx === i}
@@ -736,9 +739,6 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
                         <p className={`text-xs ${myVote === "for" ? "text-teal-400/70" : "text-red-400/70"}`}>
                           ✓ You {myVote === "for" ? "verified" : "disputed"} this usage report
                         </p>
-                      )}
-                      {isProposer && (
-                        <p className="text-orange-400/70 text-xs">⏳ Waiting for members to verify fund usage ({voteYes}/{eligibleCount})</p>
                       )}
                     </div>
                   )}
