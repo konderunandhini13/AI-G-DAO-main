@@ -90,8 +90,10 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
             const mv = (allVotesData.votes || []).filter((v: any) => v.milestone_idx === i)
             const dbYes = mv.filter((v: any) => v.vote === "for").length
             const dbNo = mv.filter((v: any) => v.vote === "against").length
-            const skip = !["pending_proof", "failed", "pending_usage_proof"].includes(m.status)
+            const skip = !["pending_proof", "failed", "pending_usage_proof", "pending"].includes(m.status)
             if (skip) return { ...m, voteYes: dbYes, voteNo: dbNo }
+            // Normalize old "pending" status to "active"
+            if (m.status === "pending") return { ...m, voteYes: dbYes, voteNo: dbNo, status: "active" }
             let newStatus = m.status
             if (m.status === "pending_usage_proof") {
               if (dbNo > 0) newStatus = "released"
@@ -426,7 +428,7 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
             const isCompleted = m.status === "completed"
             const isFailed = m.status === "failed"
             const isLocked = m.status === "locked"
-            const isActive = m.status === "active" || m.status === "pending"
+            const isActive = m.status === "active"
             const isPendingProof = m.status === "pending_proof"
             const isPendingUsage = m.status === "pending_usage_proof"
             const usageApproved = m.status === "usage_approved"
@@ -532,8 +534,16 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
                     <div className="pl-8 space-y-2 pt-1">
                       <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-3 space-y-2">
                         <p className="text-yellow-400 text-xs font-medium">📋 Completion proof submitted:</p>
-                        {m.proof && <p className="text-white/70 text-xs whitespace-pre-wrap">{m.proof}</p>}
-                        {(m.proofFiles || []).length > 0 && <FileViewer files={m.proofFiles} />}
+                        {m.proof ? (
+                          <p className="text-white/70 text-xs whitespace-pre-wrap">{m.proof}</p>
+                        ) : null}
+                        {(m.proofFiles || []).length > 0
+                          ? <FileViewer files={m.proofFiles} />
+                          : !m.proof && <p className="text-white/40 text-xs italic">No description provided — see files above</p>
+                        }
+                        {!m.proof && (m.proofFiles || []).length === 0 && (
+                          <p className="text-white/40 text-xs italic">Proof submitted — awaiting review</p>
+                        )}
                       </div>
                       <div className="space-y-1">
                         <div className="flex justify-between text-xs text-white/40">
