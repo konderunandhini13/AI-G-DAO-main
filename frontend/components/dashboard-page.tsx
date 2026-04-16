@@ -168,7 +168,7 @@ export function DashboardPage() {
       clearInterval(interval)
       window.removeEventListener('member-count-updated', handler)
     }
-  }, [])
+  }, [isConnected])
 
   // Validate wallet connection and address format for Algorand
   useEffect(() => {
