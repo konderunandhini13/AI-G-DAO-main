@@ -237,10 +237,8 @@ export default function ProposalDetailPage() {
         body: JSON.stringify({ id: proposal.id, milestones }),
       })
       if (!res.ok) throw new Error('Failed to save milestones')
-      // Re-fetch from DB to confirm saved correctly
-      const verify = await fetch(`/api/proposals/${proposal.id}`)
-      const verified = await verify.json()
-      setProposal(verified)
+      // Set milestones directly from what we saved — don't re-fetch (Supabase returns {} for empty jsonb)
+      setProposal((prev: any) => ({ ...prev, milestones }))
       setShowMilestoneForm(false)
     } catch (err: any) {
       alert(`Failed: ${err.message}`)
