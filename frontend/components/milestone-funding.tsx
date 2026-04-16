@@ -821,9 +821,9 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
               <p className="text-emerald-400 font-semibold text-sm">All 3 milestones verified ✅</p>
             </div>
             <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-4 space-y-2">
-              <p className="text-emerald-300 font-bold text-lg">🌟 {Math.round(totalFunding * 0.1).toLocaleString()} Climate Credits Earned</p>
+              <p className="text-emerald-300 font-bold text-lg">🌟 {Math.round(totalFunding * 100).toLocaleString()} Climate Credits Earned</p>
               <p className="text-white/70 text-sm">This project has successfully completed all milestones and fund usage has been verified by the community.</p>
-              <p className="text-emerald-400 text-xs mt-2">Climate credits (10% of total funding) have been added to the DAO treasury to fund future climate initiatives.</p>
+              <p className="text-emerald-400 text-xs mt-2">Climate credits (100x total funding in ALGO) have been added to the DAO treasury to fund future climate initiatives.</p>
             </div>
             <Button onClick={() => setClimateCreditsModal(false)} className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl font-semibold">
               🎉 Awesome!

@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
   try {
     await ensureTable()
     const { proposalId, proposalTitle, fundingAmount } = await req.json()
-    const credits = Math.round(Number(fundingAmount) * 0.1)
+    const credits = Math.round(Number(fundingAmount) * 100)
     await pool.query(
       `INSERT INTO climate_credits (proposal_id, proposal_title, credits, funding_amount)
        VALUES ($1, $2, $3, $4) ON CONFLICT (proposal_id) DO NOTHING`,
