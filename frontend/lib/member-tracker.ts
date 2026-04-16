@@ -50,16 +50,17 @@ class MemberTrackerService {
       // Remove from local cache
       const members = this.getRegisteredMembers().filter(a => a !== address);
       localStorage.setItem(LS_MEMBERS_KEY, JSON.stringify(members));
+      const newCount = Math.max(0, this.getCachedCount() - 1);
+      this.setCachedCount(newCount);
 
-      // Remove from DB and get real count back
+      // Remove from DB
       const response = await fetch('/api/members', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ address }),
       });
       const data = await response.json();
-      const count = data.count ?? Math.max(0, this.getCachedCount() - 1);
-      // Always trust server count on disconnect
+      const count = data.count ?? newCount;
       this.setCachedCount(count);
 
       if (typeof window !== 'undefined') {
@@ -72,22 +73,43 @@ class MemberTrackerService {
 
   async registerMember(address: string): Promise<boolean> {
     try {
+      // Check locally first — if already registered, just return current count
+      const isNewLocally = this.addRegisteredMember(address);
+      if (isNewLocally) {
+        // Increment cached count immediately before API call
+        const newCount = this.getCachedCount() + 1;
+        this.setCachedCount(newCount);
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('member-count-updated', { detail: { count: newCount } }));
+        }
+      } else {
+        // Already registered — just fire event with current cached count
+        const count = this.getCachedCount();
+        if (typeof window !== 'undefined' && count > 0) {
+          window.dispatchEvent(new CustomEvent('member-count-updated', { detail: { count } }));
+        }
+      }
+
+      // Still call API in background to keep server in sync
       const response = await fetch('/api/members', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ address })
-      })
-      const data = await response.json()
-      if (typeof data.count === 'number') {
-        this.setCachedCount(data.count)
+      });
+      const data = await response.json();
+
+      // If server count is higher (e.g. other users joined), update cache
+      if (data.count && data.count > this.getCachedCount()) {
+        this.setCachedCount(data.count);
         if (typeof window !== 'undefined') {
-          window.dispatchEvent(new CustomEvent('member-count-updated', { detail: { count: data.count } }))
+          window.dispatchEvent(new CustomEvent('member-count-updated', { detail: { count: data.count } }));
         }
       }
-      return data.isNew || false
+
+      return data.isNew || false;
     } catch (error) {
-      console.error('Error registering member:', error)
-      return false
+      console.error('Error registering member:', error);
+      return false;
     }
   }
 
@@ -96,9 +118,10 @@ class MemberTrackerService {
       const response = await fetch('/api/members');
       const data = await response.json();
       const serverCount = data.count || 0;
-      // Always trust server — it reflects actual connected members
-      this.setCachedCount(serverCount);
-      return serverCount;
+      // Use whichever is higher — server may reset but local cache persists
+      const count = Math.max(serverCount, this.getCachedCount());
+      this.setCachedCount(count);
+      return count;
     } catch (error) {
       console.error('Error getting member count:', error);
       return this.getCachedCount();

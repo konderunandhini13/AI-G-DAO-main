@@ -146,29 +146,25 @@ export function DashboardPage() {
     return filtered;
   }, [activeProposals, selectedCategories]);
 
-  // Fetch member count directly from API — poll every 5s for real-time updates
+  // Listen for real-time member count updates (fires when wallet connects)
   useEffect(() => {
-    const fetchMembers = () => {
-      fetch('/api/members')
-        .then(r => r.json())
-        .then(data => setBlockchainStats(prev => ({ ...prev, totalMembers: data.count ?? prev.totalMembers })))
-        .catch(() => {})
-    }
-    fetchMembers()
-    const interval = setInterval(fetchMembers, 5000)
-    // Also update immediately when wallet connects/disconnects
     const handler = (e: Event) => {
-      const count = (e as CustomEvent).detail?.count
-      if (typeof count === 'number') setBlockchainStats(prev => ({ ...prev, totalMembers: count }))
-      // Re-fetch from server to confirm
-      setTimeout(fetchMembers, 500)
-    }
-    window.addEventListener('member-count-updated', handler)
-    return () => {
-      clearInterval(interval)
-      window.removeEventListener('member-count-updated', handler)
-    }
-  }, [isConnected])
+      const count = (e as CustomEvent).detail?.count;
+      if (count) setBlockchainStats(prev => ({ ...prev, totalMembers: count }));
+    };
+    window.addEventListener('member-count-updated', handler);
+
+    // Also fetch live count on mount
+    fetch('/api/members')
+      .then(r => r.json())
+      .then(data => {
+        if (data.count > 0)
+          setBlockchainStats(prev => ({ ...prev, totalMembers: data.count }));
+      })
+      .catch(() => {});
+
+    return () => window.removeEventListener('member-count-updated', handler);
+  }, [])
 
   // Validate wallet connection and address format for Algorand
   useEffect(() => {
@@ -220,10 +216,7 @@ export function DashboardPage() {
         setTotalProposalsCount(allProposals.length)
         
         const stats = await getBlockchainStats()
-        setBlockchainStats(prev => ({
-          ...stats,
-          totalMembers: prev.totalMembers // never overwrite member count from getBlockchainStats
-        }))
+        setBlockchainStats(stats)
       } catch (error) {
         console.error('Failed to fetch proposal data:', error)
       } finally {
