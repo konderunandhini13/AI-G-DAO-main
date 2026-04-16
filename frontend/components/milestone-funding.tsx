@@ -41,9 +41,14 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
 
   const isProposer = address === proposalCreator
 
+  const [initialized, setInitialized] = useState(false)
+
   useEffect(() => {
-    if (initialMilestones?.length) setMilestones(initialMilestones)
-  }, [initialMilestones])
+    if (initialMilestones?.length && !initialized) {
+      setMilestones(initialMilestones)
+      setInitialized(true)
+    }
+  }, [initialMilestones, initialized])
 
   const fetchMyVotes = useCallback(async () => {
     if (!address || !proposalId) return
@@ -92,7 +97,7 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
             const dbNo = mv.filter((v: any) => v.vote === "against").length
             const skip = !["pending_proof", "failed", "pending_usage_proof", "pending"].includes(m.status)
             if (skip) return { ...m, voteYes: dbYes, voteNo: dbNo }
-            // Normalize old "pending" status to "active"
+            // Normalize old "pending" to "active"
             if (m.status === "pending") return { ...m, voteYes: dbYes, voteNo: dbNo, status: "active" }
             let newStatus = m.status
             if (m.status === "pending_usage_proof") {
@@ -110,7 +115,24 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
               return { ...m, status: "active" }
             return m
           })
-          setMilestones(withUnlocks)
+          setMilestones(prev => {
+            // Merge: never go backwards — keep local state if it's more advanced than DB
+            const statusOrder: Record<string, number> = {
+              locked: 0, active: 1, pending: 1,
+              pending_proof: 2, failed: 2,
+              completed: 3, released: 4,
+              pending_usage_proof: 5, usage_approved: 6
+            }
+            return withUnlocks.map((m: any, i: number) => {
+              const localStatus = prev[i]?.status
+              const dbStatus = m.status
+              const localOrder = statusOrder[localStatus] ?? 0
+              const dbOrder = statusOrder[dbStatus] ?? 0
+              // Keep local state if it's ahead of DB
+              if (localOrder > dbOrder) return { ...m, status: localStatus, usageProof: prev[i]?.usageProof, usageFiles: prev[i]?.usageFiles, proof: prev[i]?.proof, proofFiles: prev[i]?.proofFiles }
+              return m
+            })
+          })
           const changed = withUnlocks.some((m: any, i: number) => m.status !== p.milestones[i].status)
           if (changed) {
             fetch("/api/proposals", {
