@@ -50,17 +50,16 @@ class MemberTrackerService {
       // Remove from local cache
       const members = this.getRegisteredMembers().filter(a => a !== address);
       localStorage.setItem(LS_MEMBERS_KEY, JSON.stringify(members));
-      const newCount = Math.max(0, this.getCachedCount() - 1);
-      this.setCachedCount(newCount);
 
-      // Remove from DB
+      // Remove from DB and get real count back
       const response = await fetch('/api/members', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ address }),
       });
       const data = await response.json();
-      const count = data.count ?? newCount;
+      const count = data.count ?? Math.max(0, this.getCachedCount() - 1);
+      // Always trust server count on disconnect
       this.setCachedCount(count);
 
       if (typeof window !== 'undefined') {
@@ -98,8 +97,8 @@ class MemberTrackerService {
       });
       const data = await response.json();
 
-      // If server count is higher (e.g. other users joined), update cache
-      if (data.count && data.count > this.getCachedCount()) {
+      // Always sync cache with server count
+      if (typeof data.count === 'number') {
         this.setCachedCount(data.count);
         if (typeof window !== 'undefined') {
           window.dispatchEvent(new CustomEvent('member-count-updated', { detail: { count: data.count } }));
@@ -118,10 +117,9 @@ class MemberTrackerService {
       const response = await fetch('/api/members');
       const data = await response.json();
       const serverCount = data.count || 0;
-      // Use whichever is higher — server may reset but local cache persists
-      const count = Math.max(serverCount, this.getCachedCount());
-      this.setCachedCount(count);
-      return count;
+      // Always trust server — it reflects actual connected members
+      this.setCachedCount(serverCount);
+      return serverCount;
     } catch (error) {
       console.error('Error getting member count:', error);
       return this.getCachedCount();
