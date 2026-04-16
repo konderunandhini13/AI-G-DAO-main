@@ -600,7 +600,9 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
                         </p>
                       )}
                     </div>
-                  )}: All approved — Release Funds button */}
+                  )}
+
+                  {/* STEP 3: All approved — Release Funds button */}
                   {isCompleted && !isReleased && (
                     <div className="pl-8 pt-2 space-y-2">
                       <p className="text-green-400 text-xs font-medium">✅ All {eligibleCount} members approved!</p>
