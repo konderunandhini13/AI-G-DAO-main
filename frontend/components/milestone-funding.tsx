@@ -128,6 +128,14 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
           // Show climate credits if last milestone just became usage_approved
           const lastIdx = withUnlocks.length - 1
           if (withUnlocks[lastIdx]?.status === "usage_approved" && p.milestones[lastIdx]?.status !== "usage_approved") {
+            // Award climate credits
+            try {
+              await fetch('/api/climate-credits', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ proposalId, proposalTitle: p.title || '', fundingAmount: totalFunding }),
+              })
+            } catch {}
             setTimeout(() => setClimateCreditsModal(true), 800)
           }
         }
@@ -316,6 +324,14 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
       // Show climate credits popup when last milestone usage is approved
       const isLastMilestone = milestoneIdx === freshMilestones.length - 1
       if (newStatus === "usage_approved" && isLastMilestone) {
+        // Award climate credits
+        try {
+          await fetch('/api/climate-credits', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ proposalId, proposalTitle: '', fundingAmount: totalFunding }),
+          })
+        } catch {}
         setTimeout(() => setClimateCreditsModal(true), 800)
       }
     } catch (err: any) {
@@ -804,9 +820,9 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
               <p className="text-emerald-400 font-semibold text-sm">All 3 milestones verified ✅</p>
             </div>
             <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-4 space-y-2">
-              <p className="text-emerald-300 font-bold text-lg">🌟 Climate Credits Earned</p>
+              <p className="text-emerald-300 font-bold text-lg">🌟 {Math.round(totalFunding * 0.1).toLocaleString()} Climate Credits Earned</p>
               <p className="text-white/70 text-sm">This project has successfully completed all milestones and fund usage has been verified by the community.</p>
-              <p className="text-emerald-400 text-xs mt-2">Climate credits have been accrued for this project and will be added to the DAO treasury to fund future climate initiatives.</p>
+              <p className="text-emerald-400 text-xs mt-2">Climate credits (10% of total funding) have been added to the DAO treasury to fund future climate initiatives.</p>
             </div>
             <Button onClick={() => setClimateCreditsModal(false)} className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl font-semibold">
               🎉 Awesome!

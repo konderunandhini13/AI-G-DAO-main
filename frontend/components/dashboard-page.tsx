@@ -70,6 +70,7 @@ export function DashboardPage() {
   const [showMyProposals, setShowMyProposals] = useState(false)
   const [totalProposalsCount, setTotalProposalsCount] = useState(0)
   const [treasuryBalance, setTreasuryBalance] = useState<number | null>(null)
+  const [climateCredits, setClimateCredits] = useState<number>(0)
   const TREASURY_ADDR = '5TVL4FSSJ7OL245FRMZALZQICP3CTRT262S7YUFTLK3ZBBBFVKELOEV5XM'
   
   // NEW: Filtering state
@@ -265,6 +266,22 @@ export function DashboardPage() {
     return () => clearInterval(interval)
   }, [])
 
+  // Fetch climate credits
+  useEffect(() => {
+    const fetchCredits = async () => {
+      try {
+        const res = await fetch('/api/climate-credits')
+        if (res.ok) {
+          const data = await res.json()
+          setClimateCredits(data.total || 0)
+        }
+      } catch {}
+    }
+    fetchCredits()
+    const interval = setInterval(fetchCredits, 15000)
+    return () => clearInterval(interval)
+  }, [])
+
 
   const handleDeleteProposal = async (proposalId: number) => {
     if (!confirm('Are you sure you want to delete this proposal? This action cannot be undone.')) {
@@ -423,8 +440,8 @@ export function DashboardPage() {
     },
     { 
       label: "Climate Credits", 
-      value: "2,456", // This will be from blockchain when credits are implemented
-      change: "+15%", 
+      value: climateCredits.toLocaleString(), 
+      change: climateCredits > 0 ? "+" + Math.round(climateCredits * 0.1).toLocaleString() : "0", 
       icon: CoinsIcon, 
       color: "yellow" 
     },
