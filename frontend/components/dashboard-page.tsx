@@ -100,7 +100,7 @@ export function DashboardPage() {
   })
   const [blockchainStats, setBlockchainStats] = useState({
     totalProposals: 0,
-    totalMembers: typeof window !== 'undefined' ? memberTracker.getCachedCount() : 0,
+    totalMembers: 0,
     activeProposals: 0,
     userProposalCount: 0,
     userVoteCount: 0
@@ -150,7 +150,7 @@ export function DashboardPage() {
   useEffect(() => {
     const handler = (e: Event) => {
       const count = (e as CustomEvent).detail?.count;
-      if (count) setBlockchainStats(prev => ({ ...prev, totalMembers: count }));
+      if (typeof count === 'number') setBlockchainStats(prev => ({ ...prev, totalMembers: count }));
     };
     window.addEventListener('member-count-updated', handler);
 
@@ -216,7 +216,7 @@ export function DashboardPage() {
         setTotalProposalsCount(allProposals.length)
         
         const stats = await getBlockchainStats()
-        setBlockchainStats(stats)
+        setBlockchainStats(prev => ({ ...stats, totalMembers: prev.totalMembers }))
       } catch (error) {
         console.error('Failed to fetch proposal data:', error)
       } finally {
