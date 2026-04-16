@@ -556,21 +556,16 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
                     <p className="text-white/30 text-xs pl-8">⏳ Waiting for proposer to submit proof...</p>
                   )}
 
-                  {/* STEP 2: Proof submitted — community sees proof + votes */}
+                  {/* STEP 2: Proof submitted — visible to ALL including proposer */}
                   {isPendingProof && (
                     <div className="pl-8 space-y-2 pt-1">
                       <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-3 space-y-2">
-                        <p className="text-yellow-400 text-xs font-medium">📋 Completion proof submitted:</p>
-                        {m.proof ? (
-                          <p className="text-white/70 text-xs whitespace-pre-wrap">{m.proof}</p>
-                        ) : null}
-                        {(m.proofFiles || []).length > 0
-                          ? <FileViewer files={m.proofFiles} />
-                          : !m.proof && <p className="text-white/40 text-xs italic">No description provided — see files above</p>
+                        <p className="text-yellow-400 text-xs font-medium">📋 Completion proof:</p>
+                        {m.proof
+                          ? <p className="text-white/80 text-xs whitespace-pre-wrap">{m.proof}</p>
+                          : <p className="text-white/40 text-xs italic">No text description provided</p>
                         }
-                        {!m.proof && (m.proofFiles || []).length === 0 && (
-                          <p className="text-white/40 text-xs italic">Proof submitted — awaiting review</p>
-                        )}
+                        {(m.proofFiles || []).length > 0 && <FileViewer files={m.proofFiles} />}
                       </div>
                       <div className="space-y-1">
                         <div className="flex justify-between text-xs text-white/40">
@@ -605,9 +600,7 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
                         </p>
                       )}
                     </div>
-                  )}
-
-                  {/* STEP 3: All approved — Release Funds button */}
+                  )}: All approved — Release Funds button */}
                   {isCompleted && !isReleased && (
                     <div className="pl-8 pt-2 space-y-2">
                       <p className="text-green-400 text-xs font-medium">✅ All {eligibleCount} members approved!</p>
@@ -706,12 +699,15 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
                     <p className="text-purple-400/60 text-xs pl-8">💸 {amountAlgo} ALGO released. Waiting for proposer to submit fund usage report...</p>
                   )}
 
-                  {/* STEP 5: Usage proof submitted — community votes */}
+                  {/* STEP 5: Usage proof submitted — visible to ALL */}
                   {isPendingUsage && (
                     <div className="pl-8 space-y-2 pt-1">
                       <div className="bg-orange-500/10 border border-orange-500/20 rounded-xl p-3 space-y-2">
                         <p className="text-orange-400 text-xs font-medium mb-1">🧾 Fund usage report:</p>
-                        {m.usageProof && <p className="text-white/70 text-xs whitespace-pre-wrap">{m.usageProof.replace(/\[.*?\]\(.*?\)/g, '').trim()}</p>}
+                        {m.usageProof
+                          ? <p className="text-white/80 text-xs whitespace-pre-wrap">{m.usageProof}</p>
+                          : <p className="text-white/40 text-xs italic">No text description provided</p>
+                        }
                         {(m.usageFiles || []).length > 0 && <FileViewer files={m.usageFiles} />}
                       </div>
                       <div className="space-y-1">
