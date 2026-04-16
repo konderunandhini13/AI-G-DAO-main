@@ -75,9 +75,11 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
       let threshold = 1
       if (mRes.ok) {
         const md = await mRes.json()
-        const eligible = (md.members || []).filter((m: any) => m.address !== proposalCreator)
-        const eligibleNum = md.members ? eligible.length : Math.max(1, (md.count || 1) - 1)
-        threshold = eligibleNum > 0 ? eligibleNum : 1
+        const allMembers = md.members || []
+        const eligible = allMembers.filter((m: any) => m.address !== proposalCreator)
+        // Use eligible count, minimum 1
+        threshold = eligible.length > 0 ? eligible.length : Math.max(1, (md.count || 1) - 1)
+        if (threshold < 1) threshold = 1
         setEligibleCount(threshold)
       }
 
@@ -90,8 +92,9 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
       if (pRes.ok && allVotesRes.ok) {
         const p = await pRes.json()
         const allVotesData = await allVotesRes.json()
-        if (p.milestones?.length) {
-          const recomputed = p.milestones.map((m: any, i: number) => {
+        const pMilestones = Array.isArray(p.milestones) ? p.milestones : []
+        if (pMilestones.length > 0) {
+          const recomputed = pMilestones.map((m: any, i: number) => {
             const mv = (allVotesData.votes || []).filter((v: any) => v.milestone_idx === i)
             const dbYes = mv.filter((v: any) => v.vote === "for").length
             const dbNo = mv.filter((v: any) => v.vote === "against").length
@@ -115,9 +118,8 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
               return { ...m, status: "active" }
             return m
           })
-          // Always use DB as source of truth
           setMilestones(withUnlocks)
-          const changed = withUnlocks.some((m: any, i: number) => m.status !== p.milestones[i].status)
+          const changed = withUnlocks.some((m: any, i: number) => m.status !== pMilestones[i].status)
           if (changed) {
             fetch("/api/proposals", {
               method: "PATCH",
@@ -125,9 +127,8 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
               body: JSON.stringify({ id: proposalId, milestones: withUnlocks }),
             })
           }
-          // Show climate credits if last milestone just became usage_approved
           const lastIdx = withUnlocks.length - 1
-          if (withUnlocks[lastIdx]?.status === "usage_approved" && p.milestones[lastIdx]?.status !== "usage_approved") {
+          if (withUnlocks[lastIdx]?.status === "usage_approved" && pMilestones[lastIdx]?.status !== "usage_approved") {
             // Award climate credits
             try {
               await fetch('/api/climate-credits', {
@@ -292,10 +293,10 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
       let threshold = eligibleCount
       if (mRes.ok) {
         const md = await mRes.json()
-        const eligible = md.members
-          ? (md.members || []).filter((m: any) => m.address !== proposalCreator).length
-          : Math.max(1, (md.count || 1) - 1)
-        threshold = eligible > 0 ? eligible : 1
+        const allMembers = md.members || []
+        const eligible = allMembers.filter((m: any) => m.address !== proposalCreator)
+        threshold = eligible.length > 0 ? eligible.length : Math.max(1, (md.count || 1) - 1)
+        if (threshold < 1) threshold = 1
         setEligibleCount(threshold)
       }
 
@@ -478,7 +479,7 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
             const voteYes = m.voteYes || 0
             const voteNo = m.voteNo || 0
             const myVote = myVotes[i]
-            const canVote = isPendingProof && !isProposer && !myVote && !!address
+            const canVote = (isPendingProof || isPendingUsage) && !isProposer && !myVote && !!address
 
             const statusLabel = usageApproved ? "✅ Usage Verified"
               : isPendingUsage ? `🧾 Usage Proof (${voteYes}/${eligibleCount})`

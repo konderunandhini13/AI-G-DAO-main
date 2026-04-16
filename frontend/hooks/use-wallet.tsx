@@ -180,6 +180,9 @@ function useWallet(): WalletState {
       setIsConnected(true)
       setLoading(false)
 
+      // Always register member on page load so Supabase stays in sync
+      memberTracker.registerMember(savedAddress).catch(() => {})
+
       // Then verify session in background (with timeout)
       try {
         const timeout = new Promise<never>((_, reject) =>
