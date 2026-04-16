@@ -28,14 +28,14 @@ export function WalletGuard({
   }, [])
 
   useEffect(() => {
-    if (!loading && !isConnected) {
+    if (!loading && !isConnected && !hasSavedAddress) {
       localStorage.setItem('redirect_after_connect', window.location.pathname)
       router.push('/connect-wallet')
     }
-  }, [isConnected, loading, router])
+  }, [isConnected, loading, hasSavedAddress, router])
 
-  // Show spinner only on cold load (no saved address)
-  if (loading && !hasSavedAddress) {
+  // Show spinner while loading OR while we have a saved address but not yet reconnected
+  if (loading || (hasSavedAddress && !isConnected)) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 flex items-center justify-center">
         <div className="w-6 h-6 border-2 border-purple-500/30 border-t-purple-500 rounded-full animate-spin" />
