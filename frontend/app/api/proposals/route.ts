@@ -73,7 +73,13 @@ export async function GET(req: NextRequest) {
     const status = searchParams.get('status');
     const creator = searchParams.get('creator');
 
-    let query = 'SELECT * FROM proposals';
+    let query = `SELECT *,
+      CASE 
+        WHEN milestones IS NULL OR milestones = '{}'::jsonb THEN NULL
+        WHEN jsonb_typeof(milestones) = 'array' THEN milestones
+        ELSE NULL
+      END as milestones
+      FROM proposals`;
     const params: any[] = [];
     const conditions: string[] = [];
 
@@ -138,7 +144,9 @@ export async function PATCH(req: NextRequest) {
       await pool.query('UPDATE proposals SET ai_review = $1 WHERE id = $2', [JSON.stringify(ai_review), id]);
     }
     if (milestones !== undefined) {
-      await pool.query('UPDATE proposals SET milestones = $1 WHERE id = $2', [JSON.stringify(milestones), id]);
+      // Ensure milestones is always stored as a JSON array
+      const milestonesValue = Array.isArray(milestones) ? JSON.stringify(milestones) : null
+      await pool.query('UPDATE proposals SET milestones = $1::jsonb WHERE id = $2', [milestonesValue, id]);
       // Update reputation based on milestone completions/failures
       const { rows } = await pool.query('SELECT creator FROM proposals WHERE id = $1', [id]);
       if (rows.length > 0) {

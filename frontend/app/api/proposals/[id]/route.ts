@@ -34,7 +34,16 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 
   try {
     const client = await pool.connect();
-    const result = await client.query('SELECT * FROM proposals WHERE id = $1', [id]);
+    const result = await client.query(
+      `SELECT *, 
+        CASE 
+          WHEN milestones IS NULL OR milestones = '{}'::jsonb THEN NULL
+          WHEN jsonb_typeof(milestones) = 'array' THEN milestones
+          ELSE NULL
+        END as milestones
+       FROM proposals WHERE id = $1`, 
+      [id]
+    );
     client.release();
 
     if (!result.rows.length) {
