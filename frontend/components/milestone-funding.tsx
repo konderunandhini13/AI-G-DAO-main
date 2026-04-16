@@ -184,25 +184,27 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
       })
       const pRes = await fetch(`/api/proposals/${proposalId}`)
       const fresh = await pRes.json()
-      const fileLinks = files.map(f => `[${f.name}](${f.url})`).join(' ')
-      const fullProof = [usage, fileLinks].filter(Boolean).join('\n')
+      // Strip base64 data from file URLs before saving to DB — only keep path/name/type
+      const safeFiles = files.map(f => ({
+        url: f.url.startsWith('data:') ? '' : f.url,
+        name: f.name,
+        type: f.type
+      })).filter(f => f.url)
       const updated = (fresh.milestones || []).map((m: any, i: number) =>
-        i !== milestoneIdx ? m : { ...m, status: "pending_usage_proof", usageProof: fullProof, usageFiles: files, voteYes: 0, voteNo: 0 }
+        i !== milestoneIdx ? m : { ...m, status: "pending_usage_proof", usageProof: usage || '', usageFiles: safeFiles, voteYes: 0, voteNo: 0 }
       )
-      // Write to DB first
       const patchRes = await fetch("/api/proposals", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: proposalId, milestones: updated }),
       })
-      if (!patchRes.ok) throw new Error("Failed to save proof")
-      // Verify DB write by re-fetching
+      if (!patchRes.ok) {
+        const errData = await patchRes.json().catch(() => ({}))
+        throw new Error(errData.error || `Server error ${patchRes.status}`)
+      }
       const verifyRes = await fetch(`/api/proposals/${proposalId}`)
       const verified = await verifyRes.json()
-      const verifiedMilestone = verified.milestones?.[milestoneIdx]
-      if (verifiedMilestone?.status !== "pending_usage_proof") throw new Error("DB write not confirmed")
-      // Only update local state after DB confirmed
-      setMilestones(verified.milestones)
+      setMilestones(verified.milestones || updated)
       setMyVotes(prev => { const n = { ...prev }; delete n[milestoneIdx]; return n })
       setUsageInputs(prev => ({ ...prev, [milestoneIdx]: "" }))
       setUsageFiles(prev => ({ ...prev, [milestoneIdx]: [] }))
@@ -226,15 +228,26 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
       })
       const pRes = await fetch(`/api/proposals/${proposalId}`)
       const fresh = await pRes.json()
+      const safeFiles = files.map(f => ({
+        url: f.url.startsWith('data:') ? '' : f.url,
+        name: f.name,
+        type: f.type
+      })).filter(f => f.url)
       const updated = (fresh.milestones || []).map((m: any, i: number) =>
-        i !== milestoneIdx ? m : { ...m, status: "pending_proof", proof, proofFiles: files, voteYes: 0, voteNo: 0 }
+        i !== milestoneIdx ? m : { ...m, status: "pending_proof", proof: proof || '', proofFiles: safeFiles, voteYes: 0, voteNo: 0 }
       )
-      await fetch("/api/proposals", {
+      const patchRes = await fetch("/api/proposals", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: proposalId, milestones: updated }),
       })
-      setMilestones(updated)
+      if (!patchRes.ok) {
+        const errData = await patchRes.json().catch(() => ({}))
+        throw new Error(errData.error || `Server error ${patchRes.status}`)
+      }
+      const verifyRes = await fetch(`/api/proposals/${proposalId}`)
+      const verified = await verifyRes.json()
+      setMilestones(verified.milestones || updated)
       setMyVotes(prev => { const n = { ...prev }; delete n[milestoneIdx]; return n })
       setProofInputs(prev => ({ ...prev, [milestoneIdx]: "" }))
       setProofFiles(prev => ({ ...prev, [milestoneIdx]: [] }))
