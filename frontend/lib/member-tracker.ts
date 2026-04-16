@@ -72,43 +72,22 @@ class MemberTrackerService {
 
   async registerMember(address: string): Promise<boolean> {
     try {
-      // Check locally first — if already registered, just return current count
-      const isNewLocally = this.addRegisteredMember(address);
-      if (isNewLocally) {
-        // Increment cached count immediately before API call
-        const newCount = this.getCachedCount() + 1;
-        this.setCachedCount(newCount);
-        if (typeof window !== 'undefined') {
-          window.dispatchEvent(new CustomEvent('member-count-updated', { detail: { count: newCount } }));
-        }
-      } else {
-        // Already registered — just fire event with current cached count
-        const count = this.getCachedCount();
-        if (typeof window !== 'undefined' && count > 0) {
-          window.dispatchEvent(new CustomEvent('member-count-updated', { detail: { count } }));
-        }
-      }
-
-      // Still call API in background to keep server in sync
       const response = await fetch('/api/members', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ address })
-      });
-      const data = await response.json();
-
-      // Always sync cache with server count
+      })
+      const data = await response.json()
       if (typeof data.count === 'number') {
-        this.setCachedCount(data.count);
+        this.setCachedCount(data.count)
         if (typeof window !== 'undefined') {
-          window.dispatchEvent(new CustomEvent('member-count-updated', { detail: { count: data.count } }));
+          window.dispatchEvent(new CustomEvent('member-count-updated', { detail: { count: data.count } }))
         }
       }
-
-      return data.isNew || false;
+      return data.isNew || false
     } catch (error) {
-      console.error('Error registering member:', error);
-      return false;
+      console.error('Error registering member:', error)
+      return false
     }
   }
 

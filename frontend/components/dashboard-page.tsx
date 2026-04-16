@@ -146,37 +146,27 @@ export function DashboardPage() {
     return filtered;
   }, [activeProposals, selectedCategories]);
 
-  // Listen for real-time member count updates and fetch on mount
+  // Fetch member count directly from API — poll every 5s for real-time updates
   useEffect(() => {
+    const fetchMembers = () => {
+      fetch('/api/members')
+        .then(r => r.json())
+        .then(data => setBlockchainStats(prev => ({ ...prev, totalMembers: data.count ?? prev.totalMembers })))
+        .catch(() => {})
+    }
+    fetchMembers()
+    const interval = setInterval(fetchMembers, 5000)
+    // Also update immediately when wallet connects/disconnects
     const handler = (e: Event) => {
       const count = (e as CustomEvent).detail?.count
       if (typeof count === 'number') setBlockchainStats(prev => ({ ...prev, totalMembers: count }))
+      // Re-fetch from server to confirm
+      setTimeout(fetchMembers, 500)
     }
     window.addEventListener('member-count-updated', handler)
-
-    // Fetch live count immediately
-    fetch('/api/members')
-      .then(r => r.json())
-      .then(data => {
-        if (typeof data.count === 'number')
-          setBlockchainStats(prev => ({ ...prev, totalMembers: data.count }))
-      })
-      .catch(() => {})
-
-    // Poll every 10s to stay in sync
-    const interval = setInterval(() => {
-      fetch('/api/members')
-        .then(r => r.json())
-        .then(data => {
-          if (typeof data.count === 'number')
-            setBlockchainStats(prev => ({ ...prev, totalMembers: data.count }))
-        })
-        .catch(() => {})
-    }, 10000)
-
     return () => {
-      window.removeEventListener('member-count-updated', handler)
       clearInterval(interval)
+      window.removeEventListener('member-count-updated', handler)
     }
   }, [])
 
