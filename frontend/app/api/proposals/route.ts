@@ -75,8 +75,8 @@ export async function GET(req: NextRequest) {
 
     let query = `SELECT *,
       CASE 
-        WHEN milestones IS NULL OR milestones = '{}'::jsonb THEN NULL
-        WHEN jsonb_typeof(milestones) = 'array' THEN milestones
+        WHEN milestones IS NULL OR milestones = '{}'::jsonb OR milestones = '[]'::jsonb THEN NULL
+        WHEN jsonb_typeof(milestones) = 'array' AND jsonb_array_length(milestones) > 0 THEN milestones
         ELSE NULL
       END as milestones
       FROM proposals`;

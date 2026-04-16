@@ -35,13 +35,13 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   try {
     const client = await pool.connect();
     const result = await client.query(
-      `SELECT *, 
+      `SELECT *,
         CASE 
-          WHEN milestones IS NULL OR milestones = '{}'::jsonb THEN NULL
-          WHEN jsonb_typeof(milestones) = 'array' THEN milestones
+          WHEN milestones IS NULL OR milestones = '{}'::jsonb OR milestones = '[]'::jsonb THEN NULL
+          WHEN jsonb_typeof(milestones) = 'array' AND jsonb_array_length(milestones) > 0 THEN milestones
           ELSE NULL
         END as milestones
-       FROM proposals WHERE id = $1`, 
+       FROM proposals WHERE id = $1`,
       [id]
     );
     client.release();
