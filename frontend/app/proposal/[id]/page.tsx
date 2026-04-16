@@ -394,7 +394,7 @@ export default function ProposalDetailPage() {
                 {proposal.status === 'passed' && (
                   <>
                     {/* Proposer hasn't defined milestones yet */}
-                    {!proposal.milestones && address === proposal.creator && !showMilestoneForm && (
+                    {(!proposal.milestones || proposal.milestones.length === 0) && address === proposal.creator && !showMilestoneForm && (
                       <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-2xl p-4 space-y-3">
                         <p className="text-yellow-300 text-sm font-medium">🎉 Your proposal was approved!</p>
                         <p className="text-white/60 text-xs">Define 3 milestones. Each one unlocks only after the previous is completed and funds released.</p>
@@ -404,7 +404,7 @@ export default function ProposalDetailPage() {
                       </div>
                     )}
 
-                    {!proposal.milestones && address !== proposal.creator && (
+                    {(!proposal.milestones || proposal.milestones.length === 0) && address !== proposal.creator && (
                       <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
                         <p className="text-white/50 text-sm text-center">⏳ Waiting for proposer to define funding milestones...</p>
                       </div>
