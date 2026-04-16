@@ -402,7 +402,7 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
     }
   }
 
-  // Shared file viewer — images inline, video player, PDF/doc as clickable link
+  // Shared file viewer — resolves API file references, shows images inline, video player, PDF as link
   const FileViewer = ({ files }: { files: any[] }) => (
     <div className="space-y-2 pt-1">
       {files.map((f: any, fi: number) => (
