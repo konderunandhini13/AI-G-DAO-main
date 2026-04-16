@@ -198,7 +198,7 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
         name: f.name,
         type: f.type
       })).filter(f => f.url)
-      const updated = (fresh.milestones || []).map((m: any, i: number) =>
+      const updated = (Array.isArray(fresh.milestones) ? fresh.milestones : []).map((m: any, i: number) =>
         i !== milestoneIdx ? m : { ...m, status: "pending_usage_proof", usageProof: usage || '', usageFiles: safeFiles, voteYes: 0, voteNo: 0 }
       )
       const patchRes = await fetch("/api/proposals", {
@@ -212,7 +212,7 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
       }
       const verifyRes = await fetch(`/api/proposals/${proposalId}`)
       const verified = await verifyRes.json()
-      setMilestones(verified.milestones || updated)
+      setMilestones(Array.isArray(verified.milestones) ? verified.milestones : updated)
       setMyVotes(prev => { const n = { ...prev }; delete n[milestoneIdx]; return n })
       setUsageInputs(prev => ({ ...prev, [milestoneIdx]: "" }))
       setUsageFiles(prev => ({ ...prev, [milestoneIdx]: [] }))
@@ -241,7 +241,7 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
         name: f.name,
         type: f.type
       })).filter(f => f.url)
-      const updated = (fresh.milestones || []).map((m: any, i: number) =>
+      const updated = (Array.isArray(fresh.milestones) ? fresh.milestones : []).map((m: any, i: number) =>
         i !== milestoneIdx ? m : { ...m, status: "pending_proof", proof: proof || '', proofFiles: safeFiles, voteYes: 0, voteNo: 0 }
       )
       const patchRes = await fetch("/api/proposals", {
@@ -255,7 +255,7 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
       }
       const verifyRes = await fetch(`/api/proposals/${proposalId}`)
       const verified = await verifyRes.json()
-      setMilestones(verified.milestones || updated)
+      setMilestones(Array.isArray(verified.milestones) ? verified.milestones : updated)
       setMyVotes(prev => { const n = { ...prev }; delete n[milestoneIdx]; return n })
       setProofInputs(prev => ({ ...prev, [milestoneIdx]: "" }))
       setProofFiles(prev => ({ ...prev, [milestoneIdx]: [] }))
@@ -284,7 +284,7 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
       ])
       const allVotesData = await allVotesRes.json()
       const fresh = await pRes.json()
-      const freshMilestones = fresh.milestones || []
+      const freshMilestones = Array.isArray(fresh.milestones) ? fresh.milestones : []
       const milestoneVotes = (allVotesData.votes || []).filter((v: any) => v.milestone_idx === milestoneIdx)
       const dbYes = milestoneVotes.filter((v: any) => v.vote === "for").length
       const dbNo = milestoneVotes.filter((v: any) => v.vote === "against").length
@@ -392,7 +392,7 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
       // Update milestone statuses — next milestone stays locked until usage proof is approved
       const pRes = await fetch(`/api/proposals/${proposalId}`)
       const freshP = await pRes.json()
-      const finalMilestones = (freshP.milestones || []).map((m: any, i: number) => {
+      const finalMilestones = (Array.isArray(freshP.milestones) ? freshP.milestones : []).map((m: any, i: number) => {
         if (i === milestoneIdx) return { ...m, status: 'released' }
         return m
       })

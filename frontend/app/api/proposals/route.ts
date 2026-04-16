@@ -44,6 +44,9 @@ async function ensureTables() {
 }
 
 function mapRow(row: any) {
+  // Supabase returns empty jsonb array as {} — normalize to null
+  const milestones = row.milestones
+  const normalizedMilestones = !milestones || (typeof milestones === 'object' && !Array.isArray(milestones) && Object.keys(milestones).length === 0) ? null : milestones
   return {
     id: Number(row.id),
     title: row.title,
@@ -57,7 +60,7 @@ function mapRow(row: any) {
     category: row.category,
     aiScore: Number(row.ai_score),
     aiReview: row.ai_review || null,
-    milestones: row.milestones || null,
+    milestones: normalizedMilestones,
     creationTime: Number(row.creation_time),
   };
 }

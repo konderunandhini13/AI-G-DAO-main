@@ -6,6 +6,8 @@ const pool = new Pool({
 });
 
 function formatProposalRow(row: any) {
+  const milestones = row.milestones
+  const normalizedMilestones = !milestones || (typeof milestones === 'object' && !Array.isArray(milestones) && Object.keys(milestones).length === 0) ? null : milestones
   return {
     id: Number(row.id),
     title: row.title,
@@ -19,7 +21,7 @@ function formatProposalRow(row: any) {
     category: row.category,
     aiScore: row.ai_score !== null ? Number(row.ai_score) : undefined,
     aiReview: row.ai_review || null,
-    milestones: row.milestones || null,
+    milestones: normalizedMilestones,
     creationTime: Number(row.creation_time),
   };
 }
