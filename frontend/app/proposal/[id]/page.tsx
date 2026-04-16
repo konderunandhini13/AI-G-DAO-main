@@ -83,7 +83,7 @@ export default function ProposalDetailPage() {
           } catch {}
         }
         // Fix any milestones whose votes already meet threshold but status wasn't updated
-        if (p?.milestones) {
+        if (p?.milestones && p.milestones.length > 0) {
           let needsPatch = false
           const fixed = p.milestones.map((m: any) => {
             const total = (m.voteYes || 0) + (m.voteNo || 0)
@@ -222,23 +222,28 @@ export default function ProposalDetailPage() {
     if (draftMilestones.some(m => !m.description.trim())) { alert('Please describe all 3 milestone stages'); return }
     setSavingMilestones(true)
     try {
-      // Milestone 0 starts active, rest locked — sequential unlock
       const milestones = draftMilestones.map((m, i) => ({
         id: i + 1,
-        title: m.title,
+        title: m.description,
         description: m.description,
         fundingPercent: m.percent,
         status: i === 0 ? 'active' : 'locked',
         voteYes: 0,
         voteNo: 0,
       }))
-      await fetch('/api/proposals', {
+      const res = await fetch('/api/proposals', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: proposal.id, milestones }),
       })
-      setProposal((prev: any) => ({ ...prev, milestones }))
+      if (!res.ok) throw new Error('Failed to save milestones')
+      // Re-fetch from DB to confirm saved correctly
+      const verify = await fetch(`/api/proposals/${proposal.id}`)
+      const verified = await verify.json()
+      setProposal(verified)
       setShowMilestoneForm(false)
+    } catch (err: any) {
+      alert(`Failed: ${err.message}`)
     } finally {
       setSavingMilestones(false)
     }
