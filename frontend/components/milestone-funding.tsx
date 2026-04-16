@@ -95,10 +95,11 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
             const mv = (allVotesData.votes || []).filter((v: any) => v.milestone_idx === i)
             const dbYes = mv.filter((v: any) => v.vote === "for").length
             const dbNo = mv.filter((v: any) => v.vote === "against").length
-            const skip = !["pending_proof", "failed", "pending_usage_proof", "pending"].includes(m.status)
-            if (skip) return { ...m, voteYes: dbYes, voteNo: dbNo }
             // Normalize old "pending" to "active"
             if (m.status === "pending") return { ...m, voteYes: dbYes, voteNo: dbNo, status: "active" }
+            // Only recompute vote-driven statuses
+            if (!["pending_proof", "failed", "pending_usage_proof"].includes(m.status))
+              return { ...m, voteYes: dbYes, voteNo: dbNo }
             let newStatus = m.status
             if (m.status === "pending_usage_proof") {
               if (dbNo > 0) newStatus = "released"
@@ -109,30 +110,13 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
             }
             return { ...m, voteYes: dbYes, voteNo: dbNo, status: newStatus }
           })
-          // Unlock next milestone when usage_approved
           const withUnlocks = recomputed.map((m: any, i: number) => {
             if (i > 0 && recomputed[i - 1].status === "usage_approved" && m.status === "locked")
               return { ...m, status: "active" }
             return m
           })
-          setMilestones(prev => {
-            // Merge: never go backwards — keep local state if it's more advanced than DB
-            const statusOrder: Record<string, number> = {
-              locked: 0, active: 1, pending: 1,
-              pending_proof: 2, failed: 2,
-              completed: 3, released: 4,
-              pending_usage_proof: 5, usage_approved: 6
-            }
-            return withUnlocks.map((m: any, i: number) => {
-              const localStatus = prev[i]?.status
-              const dbStatus = m.status
-              const localOrder = statusOrder[localStatus] ?? 0
-              const dbOrder = statusOrder[dbStatus] ?? 0
-              // Keep local state if it's ahead of DB
-              if (localOrder > dbOrder) return { ...m, status: localStatus, usageProof: prev[i]?.usageProof, usageFiles: prev[i]?.usageFiles, proof: prev[i]?.proof, proofFiles: prev[i]?.proofFiles }
-              return m
-            })
-          })
+          // Always use DB as source of truth
+          setMilestones(withUnlocks)
           const changed = withUnlocks.some((m: any, i: number) => m.status !== p.milestones[i].status)
           if (changed) {
             fetch("/api/proposals", {
@@ -205,12 +189,20 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
       const updated = (fresh.milestones || []).map((m: any, i: number) =>
         i !== milestoneIdx ? m : { ...m, status: "pending_usage_proof", usageProof: fullProof, usageFiles: files, voteYes: 0, voteNo: 0 }
       )
-      await fetch("/api/proposals", {
+      // Write to DB first
+      const patchRes = await fetch("/api/proposals", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: proposalId, milestones: updated }),
       })
-      setMilestones(updated)
+      if (!patchRes.ok) throw new Error("Failed to save proof")
+      // Verify DB write by re-fetching
+      const verifyRes = await fetch(`/api/proposals/${proposalId}`)
+      const verified = await verifyRes.json()
+      const verifiedMilestone = verified.milestones?.[milestoneIdx]
+      if (verifiedMilestone?.status !== "pending_usage_proof") throw new Error("DB write not confirmed")
+      // Only update local state after DB confirmed
+      setMilestones(verified.milestones)
       setMyVotes(prev => { const n = { ...prev }; delete n[milestoneIdx]; return n })
       setUsageInputs(prev => ({ ...prev, [milestoneIdx]: "" }))
       setUsageFiles(prev => ({ ...prev, [milestoneIdx]: [] }))
