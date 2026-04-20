@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// POST /api/votes — record a vote
+// POST /api/votes — record a vote and auto-pass if majority reached
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -38,6 +38,24 @@ export async function POST(req: NextRequest) {
        ON CONFLICT (proposal_id, voter_address) DO NOTHING`,
       [proposalId, voterAddress, vote, txId]
     );
+
+    // Auto-pass or reject proposal if majority reached
+    const [proposalRes, membersRes] = await Promise.all([
+      pool.query('SELECT vote_yes, vote_no, status FROM proposals WHERE id = $1', [proposalId]),
+      pool.query('SELECT COUNT(*) FROM dao_members'),
+    ])
+    const proposal = proposalRes.rows[0]
+    const totalMembers = Number(membersRes.rows[0]?.count || 1)
+    const majority = Math.floor(totalMembers / 2) + 1
+
+    if (proposal && proposal.status === 'active') {
+      if (proposal.vote_yes >= majority && proposal.vote_yes > proposal.vote_no) {
+        await pool.query('UPDATE proposals SET status = $1 WHERE id = $2', ['passed', proposalId])
+      } else if (proposal.vote_no >= majority) {
+        await pool.query('UPDATE proposals SET status = $1 WHERE id = $2', ['rejected', proposalId])
+      }
+    }
+
     return NextResponse.json({ success: true });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
