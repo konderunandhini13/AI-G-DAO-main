@@ -219,10 +219,8 @@ export function SubmitProposalPage() {
           
           {/* Page Title */}
           <div className="text-center space-y-2 sm:space-y-4">
-            <h1 className="text-2xl sm:text-4xl font-bold text-white leading-tight">Submit Climate Proposal</h1>
-            <p className="text-blue-300 text-sm sm:text-lg">
-              Propose your climate impact project to the EcoNexus community
-            </p>
+            <h1 className="text-2xl sm:text-4xl font-bold text-white leading-tight">Submit Project Proposal</h1>
+
           </div>
 
           {/* Transaction Status */}
