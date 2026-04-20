@@ -69,7 +69,7 @@ export default function VotePage() {
   const [votingId, setVotingId] = useState<number | null>(null);
   const [successId, setSuccessId] = useState<number | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [filter, setFilter] = useState<FilterTab>('all');
+  const [filter, setFilter] = useState<FilterTab>('active');
   const [fundingPopup, setFundingPopup] = useState<{ status: 'passed' | 'rejected'; amount: number; title: string } | null>(null);
 
   const loadProposals = useCallback(async () => {
