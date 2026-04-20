@@ -136,6 +136,12 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ proposalId, proposalTitle: p.title || '', fundingAmount: totalFunding }),
               })
+              // Mark proposal as completed
+              await fetch('/api/proposals', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: proposalId, status: 'completed' }),
+              })
             } catch {}
             setTimeout(() => setClimateCreditsModal(true), 800)
           }
@@ -325,12 +331,17 @@ export function MilestoneFunding({ proposalId, proposalCreator, totalFunding, in
       // Show climate credits popup when last milestone usage is approved
       const isLastMilestone = milestoneIdx === freshMilestones.length - 1
       if (newStatus === "usage_approved" && isLastMilestone) {
-        // Award climate credits
         try {
           await fetch('/api/climate-credits', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ proposalId, proposalTitle: '', fundingAmount: totalFunding }),
+          })
+          // Mark proposal as completed
+          await fetch('/api/proposals', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: proposalId, status: 'completed' }),
           })
         } catch {}
         setTimeout(() => setClimateCreditsModal(true), 800)

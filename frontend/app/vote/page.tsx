@@ -57,7 +57,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   'transportation':        'bg-purple-500/20 text-purple-400 border-purple-500/50',
 };
 
-type FilterTab = 'all' | 'active' | 'passed' | 'rejected' | 'expired';
+type FilterTab = 'all' | 'active' | 'passed' | 'rejected' | 'expired' | 'completed';
 
 export default function VotePage() {
   const { isConnected, address, balance } = useWalletContext();
@@ -179,14 +179,18 @@ export default function VotePage() {
     }
   };
 
-  const filtered = proposals.filter(p => filter === 'all' || p.status === filter);
+  const filtered = proposals.filter(p => {
+    if (filter === 'all') return p.status !== 'completed'
+    return p.status === filter
+  })
 
   const tabs: { key: FilterTab; label: string; count: number }[] = [
-    { key: 'all',      label: 'All',      count: proposals.length },
-    { key: 'active',   label: 'Active',   count: proposals.filter(p => p.status === 'active').length },
-    { key: 'passed',   label: 'Passed',   count: proposals.filter(p => p.status === 'passed').length },
-    { key: 'rejected', label: 'Rejected', count: proposals.filter(p => p.status === 'rejected').length },
-    { key: 'expired',  label: 'Expired',  count: proposals.filter(p => p.status === 'expired').length },
+    { key: 'all',       label: 'All',       count: proposals.filter(p => p.status !== 'completed').length },
+    { key: 'active',    label: 'Active',    count: proposals.filter(p => p.status === 'active').length },
+    { key: 'passed',    label: 'Passed',    count: proposals.filter(p => p.status === 'passed').length },
+    { key: 'rejected',  label: 'Rejected',  count: proposals.filter(p => p.status === 'rejected').length },
+    { key: 'expired',   label: 'Expired',   count: proposals.filter(p => p.status === 'expired').length },
+    { key: 'completed', label: '✅ Completed', count: proposals.filter(p => p.status === 'completed').length },
   ];
 
   return (
