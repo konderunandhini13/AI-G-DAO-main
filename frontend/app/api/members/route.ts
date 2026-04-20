@@ -32,12 +32,20 @@ export async function GET() {
   }
 }
 
+const TREASURY = '5TVL4FSSJ7OL245FRMZALZQICP3CTRT262S7YUFTLK3ZBBBFVKELOEV5XM'
+
 export async function POST(request: NextRequest) {
   try {
     await ensureTable();
     const { address } = await request.json();
     if (!address) {
       return NextResponse.json({ error: 'Address required' }, { status: 400 });
+    }
+    // Never register treasury wallet as a member
+    if (address === TREASURY) {
+      const countResult = await pool.query('SELECT COUNT(*) FROM dao_members');
+      const count = Number(countResult.rows[0]?.count || 0);
+      return NextResponse.json({ success: true, isNew: false, count });
     }
 
     const existing = await pool.query('SELECT address FROM dao_members WHERE address = $1', [address]);
